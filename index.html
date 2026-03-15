@@ -13,35 +13,42 @@
         .header { background-color: #1877f2; color: white; padding: 10px; text-align: center; font-size: 16px; font-weight: bold; }
         .container { padding: 8px; max-width: 600px; margin: auto; }
         h3 { margin-top: 0; font-size: 14px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 6px;}
-        .card { background: white; padding: 8px; margin-bottom: 8px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-        input, button { padding: 10px; margin: 3px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 15px; }
+        .card { background: white; padding: 10px; margin-bottom: 8px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+        input, button { padding: 10px; margin: 3px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 14px; }
         button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; }
-        .btn-danger { background-color: #dc3545; padding: 5px 8px; font-size: 11px; width: auto; color: white; border: none;}
-        .btn-warning { background-color: #ffc107; color: #333; padding: 5px 8px; font-size: 11px; width: auto; border: none; font-weight: bold;}
-        .btn-secondary { background-color: #6c757d; color: white; margin-bottom: 8px; padding: 6px; font-size: 13px;}
-        table { width: 100%; border-collapse: collapse; margin-top: 4px; text-align: center; font-size: 13px; }
-        th, td { padding: 6px 3px; border-bottom: 1px solid #eee; }
         
-        .sel-row { display: flex; align-items: center; padding: 5px; border-radius: 6px; margin-bottom: 2px; transition: 0.2s; border: 1px solid transparent; }
+        .formula-box { font-size: 10px; color: #666; background: #fdfdfd; padding: 8px; border-radius: 6px; border: 1px dashed #ccc; margin-bottom: 10px; line-height: 1.4; }
+        table { width: 100%; border-collapse: collapse; margin-top: 4px; text-align: center; font-size: 12px; }
+        th, td { padding: 8px 2px; border-bottom: 1px solid #eee; }
+        th { color: #888; text-transform: uppercase; font-size: 9px; }
+        .w-l { font-size: 10px; color: #999; }
+        .win-pct { color: #28a745; font-weight: bold; }
+        .tie-break-val { font-size: 10px; color: #1877f2; }
+
+        .player-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 5px; border: 1px solid #eee; }
+        .player-row label { flex-grow: 1; font-weight: 500; font-size: 15px; }
+        .player-row input[type="checkbox"] { width: 22px; height: 22px; }
+
+        .sel-row { display: flex; align-items: center; padding: 5px; border-radius: 6px; margin-bottom: 2px; border: 1px solid transparent; }
         .sel-row.t1-highlight { background-color: #e7f3ff; border-color: #1877f2; }
         .sel-row.t2-highlight { background-color: #ffeef0; border-color: #dc3545; }
-        
-        .sel-name { flex-grow: 1; font-weight: 600; font-size: 14px; color: #333; }
-        .sel-btn { padding: 6px 12px; margin-left: 5px; width: auto; border: 1px solid #ccd0d5; background: #fff; color: #555; border-radius: 6px; font-size: 12px; font-weight: bold;}
-        .sel-btn.t1.active { background: #1877f2; color: white; border-color: #1877f2; }
-        .sel-btn.t2.active { background: #dc3545; color: white; border-color: #dc3545; }
+        .sel-name { flex-grow: 1; font-weight: 600; font-size: 14px; }
+        .sel-btn { padding: 6px 12px; margin-left: 5px; width: auto; border: 1px solid #ccd0d5; background: #fff; border-radius: 6px; font-size: 12px; font-weight: bold;}
+        .sel-btn.t1.active { background: #1877f2; color: white; }
+        .sel-btn.t2.active { background: #dc3545; color: white; }
         
         .match-box { display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #f8f9fa; padding: 8px; border-radius: 8px; margin-bottom: 8px;}
         .team-input { width: 45%; }
-        .team-input p { text-align: center; margin: 0 0 2px 0; font-weight: bold; font-size: 13px;}
         .team-input input { text-align: center; font-size: 20px; font-weight: bold; padding: 5px; margin: 0;}
         
         .history-item { padding: 10px 0; border-bottom: 1px solid #eee; }
-        .hist-meta { font-size: 11px; color: #888; margin-bottom: 3px; font-weight: bold;}
+        .hist-meta { font-size: 11px; color: #888; font-weight: bold;}
         .hist-main { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .btn-danger { background-color: #dc3545; padding: 5px 8px; font-size: 11px; width: auto; color: white; border: none; border-radius: 6px;}
+        .btn-warning { background-color: #ffc107; color: #333; padding: 5px 8px; font-size: 11px; width: auto; border: none; border-radius: 6px;}
 
         .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); padding: 5px 0; padding-bottom: env(safe-area-inset-bottom, 5px); }
-        .tab-btn { background: none; border: none; color: #666; font-size: 10px; font-weight: bold; display: flex; flex-direction: column; align-items: center; width: 20%; }
+        .tab-btn { background: none; border: none; color: #666; font-size: 9px; font-weight: bold; display: flex; flex-direction: column; align-items: center; width: 16%; }
         .tab-btn.active { color: #1877f2; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -57,9 +64,9 @@
             <div class="card">
                 <div id="playerSelectionGrid"></div>
                 <div class="match-box">
-                    <div class="team-input"><p style="color:#1877f2">Team 1</p><input type="number" id="score1" placeholder="0" inputmode="numeric"></div>
+                    <div class="team-input"><input type="number" id="score1" placeholder="T1 Score" inputmode="numeric"></div>
                     <div style="font-weight:bold; color:#999">VS</div>
-                    <div class="team-input"><p style="color:#dc3545">Team 2</p><input type="number" id="score2" placeholder="0" inputmode="numeric"></div>
+                    <div class="team-input"><input type="number" id="score2" placeholder="T2 Score" inputmode="numeric"></div>
                 </div>
                 <button onclick="recordScore()">Submit Match</button>
             </div>
@@ -68,17 +75,29 @@
         <div id="tab-attend" class="tab-content">
             <div class="card">
                 <h3>Today's Roster</h3>
-                <div id="attendanceList" style="display:flex; flex-direction:column; gap:5px;"></div>
-                <button onclick="endSession()" style="background-color:#ffc107; color:#333; margin-top:10px;">End Session</button>
+                <div id="attendanceList"></div>
+                <button onclick="endSession()" style="background-color:#ffc107; color:#333; margin-top:12px;">Reset Attendance</button>
             </div>
         </div>
 
         <div id="tab-board" class="tab-content">
             <div class="card">
-                <h3>🏆 Leaderboard</h3>
+                <h3>🏆 Individual Rank</h3>
+                <div class="formula-box" id="formulaText"></div>
                 <table>
-                    <thead><tr><th>Rnk</th><th style="text-align:left">Player</th><th>G</th><th>PPG</th></tr></thead>
+                    <thead><tr><th>Rnk</th><th style="text-align:left">Player</th><th>G</th><th>W-L</th><th>PPG</th></tr></thead>
                     <tbody id="leaderboardBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="tab-pairs" class="tab-content">
+            <div class="card">
+                <h3>👥 Pair Dominance</h3>
+                <div class="formula-box">Ranked by Win % | Tie-break: PPG</div>
+                <table>
+                    <thead><tr><th>Rnk</th><th style="text-align:left">The Pair</th><th>G</th><th>W-L</th><th>PPG</th><th>Win%</th></tr></thead>
+                    <tbody id="pairsBody"></tbody>
                 </table>
             </div>
         </div>
@@ -86,21 +105,28 @@
         <div id="tab-history" class="tab-content">
             <div class="card">
                 <h3>History</h3>
-                <button class="btn-secondary" onclick="window.print()">🖨️ PDF Report</button>
+                <button style="background-color:#6c757d; color:white; font-size:13px; margin-bottom:8px;" onclick="window.print()">🖨️ PDF Report</button>
                 <div id="historyList"></div>
             </div>
         </div>
 
         <div id="tab-settings" class="tab-content">
             <div class="card">
-                <h3>Admin</h3>
-                <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; margin-bottom:10px;">
+                <h3>Scoring Parameters</h3>
+                <div style="font-size:12px; display:grid; grid-template-columns: 1fr 60px; gap:10px; align-items:center;">
+                    <label>Win Bonus Points:</label>
+                    <input type="number" id="winBonus" value="3" onchange="updateSettings()">
+                    <label>Margin Multiplier:</label>
+                    <input type="number" id="marginMult" value="1" onchange="updateSettings()">
                     <label>Min Games to Rank:</label>
-                    <input type="number" id="minGames" value="3" onchange="updateUI()" style="width:50px; text-align:center;">
+                    <input type="number" id="minGames" value="3" onchange="updateSettings()">
                 </div>
+            </div>
+            <div class="card">
+                <h3>Player Management</h3>
                 <div style="display:flex; gap:5px;">
-                    <input type="text" id="playerName" placeholder="Add Player">
-                    <button onclick="addPlayer()" style="width:70px; padding:0;">Add</button>
+                    <input type="text" id="playerName" placeholder="Name">
+                    <button onclick="addPlayer()" style="width:70px;">Add</button>
                 </div>
             </div>
         </div>
@@ -109,7 +135,8 @@
     <div class="tab-bar">
         <button class="tab-btn active" onclick="switchTab('play', this)">🎮<br>Play</button>
         <button class="tab-btn" onclick="switchTab('attend', this)">📍<br>Roster</button>
-        <button class="tab-btn" onclick="switchTab('board', this)">🏆<br>Rank</button>
+        <button class="tab-btn" onclick="switchTab('board', this)">🏆<br>Indiv.</button>
+        <button class="tab-btn" onclick="switchTab('pairs', this)">👥<br>Pairs</button>
         <button class="tab-btn" onclick="switchTab('history', this)">🕒<br>History</button>
         <button class="tab-btn" onclick="switchTab('settings', this)">⚙️<br>Admin</button>
     </div>
@@ -132,17 +159,33 @@
         let players = [];
         let matchHistory = [];
         let teamSelections = {}; 
+        let config = { winBonus: 3, marginMult: 1, minGames: 3 };
 
         cloudDoc.onSnapshot((doc) => {
             if (doc.exists) {
-                players = doc.data().players || [];
-                matchHistory = doc.data().matchHistory || [];
+                const data = doc.data();
+                players = data.players || [];
+                matchHistory = data.matchHistory || [];
+                if(data.config) {
+                    config = data.config;
+                    document.getElementById('winBonus').value = config.winBonus;
+                    document.getElementById('marginMult').value = config.marginMult;
+                    document.getElementById('minGames').value = config.minGames;
+                }
                 document.getElementById('syncStatus').innerText = "🟢 Online";
                 updateUI();
             } else { saveToCloud(); }
         });
 
-        function saveToCloud() { cloudDoc.set({ players, matchHistory }); }
+        function saveToCloud() { cloudDoc.set({ players, matchHistory, config }); }
+
+        function updateSettings() {
+            config.winBonus = parseInt(document.getElementById('winBonus').value) || 0;
+            config.marginMult = parseInt(document.getElementById('marginMult').value) || 0;
+            config.minGames = parseInt(document.getElementById('minGames').value) || 1;
+            recalculateStats();
+            saveToCloud();
+        }
 
         function switchTab(tabId, btn) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
@@ -180,11 +223,23 @@
             let s1 = parseInt(document.getElementById('score1').value);
             let s2 = parseInt(document.getElementById('score2').value);
             if (t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Check Selection/Scores");
-            
             matchHistory.push({ t1, t2, s1, s2, id: Date.now() });
             document.getElementById('score1').value = ''; document.getElementById('score2').value = '';
             teamSelections = {}; recalculateStats(); saveToCloud();
             switchTab('board', document.querySelectorAll('.tab-btn')[2]);
+        }
+
+        function recalculateStats() {
+            players.forEach(p => { p.games = 0; p.points = 0; p.wins = 0; p.losses = 0; });
+            matchHistory.forEach(m => {
+                let diff = Math.abs(m.s1 - m.s2);
+                let bonus1 = (m.s1 > m.s2) ? (config.winBonus + (diff * config.marginMult)) : 0;
+                let bonus2 = (m.s2 > m.s1) ? (config.winBonus + (diff * config.marginMult)) : 0;
+                players.forEach(p => {
+                    if (m.t1.includes(p.name)) { p.points += (m.s1 + bonus1); p.games++; if(m.s1 > m.s2) p.wins++; else p.losses++; }
+                    if (m.t2.includes(p.name)) { p.points += (m.s2 + bonus2); p.games++; if(m.s2 > m.s1) p.wins++; else p.losses++; }
+                });
+            });
         }
 
         function deleteMatch(id) {
@@ -196,44 +251,20 @@
                 let m = matchHistory.find(x => x.id === id);
                 let ns1 = prompt("New Score T1:", m.s1);
                 let ns2 = prompt("New Score T2:", m.s2);
-                
-                // DD-MM-YYYY format for the popup
                 let dateObj = new Date(m.id);
-                let d = String(dateObj.getDate()).padStart(2, '0');
-                let mo = String(dateObj.getMonth() + 1).padStart(2, '0');
-                let currentDayStr = `${d}-${mo}-${dateObj.getFullYear()}`;
-                
+                let currentDayStr = `${String(dateObj.getDate()).padStart(2,'0')}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${dateObj.getFullYear()}`;
                 let nDate = prompt("Change Date (DD-MM-YYYY):", currentDayStr);
-
                 if(ns1 !== null && ns2 !== null && nDate !== null) {
-                    m.s1 = parseInt(ns1);
-                    m.s2 = parseInt(ns2);
-                    
+                    m.s1 = parseInt(ns1); m.s2 = parseInt(ns2);
                     let parts = nDate.split('-');
                     if(parts.length === 3) {
-                        // Reconstruct to YYYY, MM-1, DD for the JS date object
-                        let newTs = new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+                        let newTs = new Date(parts[2], parts[1]-1, parts[0]).getTime();
                         if(!isNaN(newTs)) m.id = newTs;
                     }
-                    
                     matchHistory.sort((a,b) => a.id - b.id);
-                    recalculateStats(); 
-                    saveToCloud(); 
+                    recalculateStats(); saveToCloud();
                 }
             }
-        }
-
-        function recalculateStats() {
-            players.forEach(p => { p.games = 0; p.points = 0; p.wins = 0; p.losses = 0; });
-            matchHistory.forEach(m => {
-                let diff = Math.abs(m.s1 - m.s2);
-                let p1 = m.s1 + (m.s1 > m.s2 ? 3 + diff : 0);
-                let p2 = m.s2 + (m.s2 > m.s1 ? 3 + diff : 0);
-                players.forEach(p => {
-                    if (m.t1.includes(p.name)) { p.points += p1; p.games++; if(m.s1>m.s2) p.wins++; }
-                    if (m.t2.includes(p.name)) { p.points += p2; p.games++; if(m.s2>m.s1) p.wins++; }
-                });
-            });
         }
 
         function endSession() {
@@ -241,10 +272,12 @@
         }
 
         function updateUI() {
+            document.getElementById('formulaText').innerHTML = `<strong>PPG:</strong> (Score + Wins × ${config.winBonus} + Margin × ${config.marginMult}) ÷ Games`;
+            
             let attendDiv = document.getElementById('attendanceList');
             attendDiv.innerHTML = '';
             players.sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
-                attendDiv.innerHTML += `<div style="display:flex; justify-content:space-between; align-items:center; padding:5px; background:#f8f9fa; border-radius:5px;"><label>${p.name}</label><input type="checkbox" onchange="toggleAttendance('${p.name}')" ${p.present?'checked':''}></div>`;
+                attendDiv.innerHTML += `<div class="player-row"><label for="chk_${p.name}">${p.name}</label><input type="checkbox" id="chk_${p.name}" onchange="toggleAttendance('${p.name}')" ${p.present?'checked':''}></div>`;
             });
 
             let gridDiv = document.getElementById('playerSelectionGrid');
@@ -252,42 +285,53 @@
             gridDiv.innerHTML = '';
             present.forEach(p => {
                 let highlightClass = (teamSelections[p.name] === 1) ? 't1-highlight' : (teamSelections[p.name] === 2) ? 't2-highlight' : '';
-                gridDiv.innerHTML += `
-                    <div class="sel-row ${highlightClass}">
-                        <div class="sel-name">${p.name}</div>
-                        <button class="sel-btn t1 ${teamSelections[p.name]===1?'active':''}" onclick="toggleTeamSelection('${p.name}', 1)">T1</button>
-                        <button class="sel-btn t2 ${teamSelections[p.name]===2?'active':''}" onclick="toggleTeamSelection('${p.name}', 2)">T2</button>
-                    </div>`;
+                gridDiv.innerHTML += `<div class="sel-row ${highlightClass}"><div class="sel-name">${p.name}</div><button class="sel-btn t1 ${teamSelections[p.name]===1?'active':''}" onclick="toggleTeamSelection('${p.name}', 1)">T1</button><button class="sel-btn t2 ${teamSelections[p.name]===2?'active':''}" onclick="toggleTeamSelection('${p.name}', 2)">T2</button></div>`;
             });
 
             let histDiv = document.getElementById('historyList');
             histDiv.innerHTML = '';
             [...matchHistory].reverse().forEach(m => {
-                // Displaying date as DD-MM-YYYY in history list
-                let dateObj = new Date(m.id);
-                let d = String(dateObj.getDate()).padStart(2, '0');
-                let mo = String(dateObj.getMonth() + 1).padStart(2, '0');
-                let displayDate = `${d}-${mo}-${dateObj.getFullYear()}`;
-
-                histDiv.innerHTML += `
-                    <div class="history-item">
-                        <div class="hist-meta">${displayDate}</div>
-                        <div class="hist-main">
-                            <div><b>${m.s1}-${m.s2}</b> <span style="color:#888; font-size:11px">(${m.t1[0]},${m.t1[1]} vs ${m.t2[0]},${m.t2[1]})</span></div>
-                            <div class="action-btns">
-                                <button class="btn-warning" onclick="editMatch(${m.id})">Edit</button>
-                                <button class="btn-danger" onclick="deleteMatch(${m.id})">X</button>
-                            </div>
-                        </div>
-                    </div>`;
+                let dStr = new Date(m.id).toLocaleDateString('en-GB').replace(/\//g, '-');
+                histDiv.innerHTML += `<div class="history-item"><div class="hist-meta">${dStr}</div><div class="hist-main"><div><b>${m.s1}-${m.s2}</b> <span style="color:#888; font-size:11px">(${m.t1[0]},${m.t1[1]} vs ${m.t2[0]},${m.t2[1]})</span></div><div class="action-btns"><button class="btn-warning" onclick="editMatch(${m.id})">Edit</button><button class="btn-danger" onclick="deleteMatch(${m.id})">X</button></div></div></div>`;
             });
 
-            let min = document.getElementById('minGames').value || 3;
-            let ranked = players.filter(p => p.games >= min).sort((a,b) => (b.points/b.games) - (a.points/a.games));
+            let ranked = players.filter(p => p.games >= config.minGames).sort((a,b) => (b.points/b.games) - (a.points/a.games));
             let tbody = document.getElementById('leaderboardBody');
             tbody.innerHTML = '';
             ranked.forEach((p, i) => {
-                tbody.innerHTML += `<tr><td>${i+1}</td><td style="text-align:left">${p.name}</td><td>${p.games}</td><td><b>${(p.points/(p.games||1)).toFixed(1)}</b></td></tr>`;
+                tbody.innerHTML += `<tr><td>${i+1}</td><td style="text-align:left">${p.name}</td><td>${p.games}</td><td><span class="w-l">${p.wins}W/${p.losses}L</span></td><td><b>${(p.points/(p.games||1)).toFixed(1)}</b></td></tr>`;
+            });
+
+            // PAIRS LOGIC WITH PPG TIE-BREAKER
+            let pairs = {};
+            matchHistory.forEach(m => {
+                let teams = [{names: m.t1, score: m.s1, opp: m.s2}, {names: m.t2, score: m.s2, opp: m.s1}];
+                teams.forEach(t => {
+                    let key = t.names.sort().join(" & ");
+                    if(!pairs[key]) pairs[key] = { name: key, games: 0, wins: 0, losses: 0, totalPoints: 0 };
+                    pairs[key].games++;
+                    let diff = Math.abs(t.score - t.opp);
+                    let bonus = (t.score > t.opp) ? (config.winBonus + (diff * config.marginMult)) : 0;
+                    pairs[key].totalPoints += (t.score + bonus);
+                    if(t.score > t.opp) pairs[key].wins++; else pairs[key].losses++;
+                });
+            });
+
+            let pairList = Object.values(pairs).filter(p => p.games >= 2);
+            // SORT: Win % Primary, PPG Secondary
+            pairList.sort((a,b) => {
+                let winA = a.wins / a.games;
+                let winB = b.wins / b.games;
+                if (winB !== winA) return winB - winA;
+                return (b.totalPoints / b.games) - (a.totalPoints / a.games);
+            });
+
+            let ptbody = document.getElementById('pairsBody');
+            ptbody.innerHTML = '';
+            pairList.forEach((p, i) => {
+                let winPct = ((p.wins / p.games) * 100).toFixed(0) + "%";
+                let ppg = (p.totalPoints / p.games).toFixed(1);
+                ptbody.innerHTML += `<tr><td>${i+1}</td><td style="text-align:left; font-size:10px;">${p.name}</td><td>${p.games}</td><td><span class="w-l">${p.wins}W/${p.losses}L</span></td><td class="tie-break-val">${ppg}</td><td class="win-pct">${winPct}</td></tr>`;
             });
         }
     </script>
