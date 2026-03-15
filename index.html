@@ -17,7 +17,20 @@
         input, button { padding: 8px; margin: 2px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 14px; }
         button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; }
         
-        .last-result-ticker { background: #fff9e6; border: 1px solid #ffeeba; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 11px; text-align: center; color: #856404; display: none; }
+        /* UPDATED: Larger Last Result Ticker */
+        .last-result-ticker { 
+            background: #fff9e6; 
+            border: 2px solid #ffc107; 
+            border-radius: 10px; 
+            padding: 10px; 
+            margin-bottom: 10px; 
+            font-size: 14px; 
+            text-align: center; 
+            color: #856404; 
+            display: none; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
         .badge { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; color: white; font-size: 9px; font-weight: bold; margin-right: 5px; vertical-align: middle; }
         .badge-1 { background: #ffd700; color: #000; }
         .badge-2 { background: #c0c0c0; color: #000; }
@@ -41,7 +54,6 @@
         .sel-btn.t1.active { background: #1877f2; color: white; }
         .sel-btn.t2.active { background: #dc3545; color: white; }
         
-        /* Pinned bottom alignment */
         .bottom-controls { margin-top: auto; padding-top: 10px; }
         .match-box { display: flex; justify-content: space-between; align-items: center; gap: 6px; background: #f8f9fa; padding: 6px; border-radius: 8px; margin-bottom: 6px;}
         .team-input { width: 45%; }
@@ -295,10 +307,11 @@
         }
 
         function updateUI() {
+            // Ticker Logic
             const ticker = document.getElementById('lastResult');
             if(matchHistory.length > 0) {
                 const last = matchHistory[matchHistory.length - 1];
-                ticker.innerHTML = `🏁 <b>Last:</b> ${last.t1.join("/")} (${last.s1}) vs ${last.t2.join("/")} (${last.s2})`;
+                ticker.innerHTML = `🏆 <b>Latest Game Result</b><br>${last.t1.join(" & ")} (<b>${last.s1}</b>) vs ${last.t2.join(" & ")} (<b>${last.s2}</b>)`;
                 ticker.style.display = 'block';
             }
 
