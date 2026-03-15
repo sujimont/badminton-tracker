@@ -30,8 +30,9 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        .badge { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; color: white; font-size: 10px; font-weight: bold; margin-right: 8px; vertical-align: middle; }
-        .badge-1 { background: #ffd700; color: #000; box-shadow: 0 0 5px #ffd700; }
+        /* Badge Styles */
+        .badge { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; color: white; font-size: 9px; font-weight: bold; margin-right: 6px; vertical-align: middle; flex-shrink: 0; }
+        .badge-1 { background: #ffd700; color: #000; box-shadow: 0 0 4px #ffd700; }
         .badge-2 { background: #c0c0c0; color: #000; }
         .badge-3 { background: #cd7f32; }
         .badge-4 { background: #1877f2; }
@@ -42,14 +43,14 @@
         th { color: #888; text-transform: uppercase; font-size: 9px; }
         
         .player-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #f8f9fa; border-radius: 6px; margin-bottom: 4px; border: 1px solid #eee; }
-        .player-row label { flex-grow: 1; font-weight: 500; font-size: 14px; }
+        .player-row label { flex-grow: 1; font-weight: 500; font-size: 14px; display: flex; align-items: center; }
         .player-row input[type="checkbox"] { width: 20px; height: 20px; }
 
-        .sel-row { display: flex; align-items: center; padding: 3px 5px; border-radius: 6px; margin-bottom: 2px; border: 1px solid transparent; }
+        .sel-row { display: flex; align-items: center; padding: 4px 6px; border-radius: 6px; margin-bottom: 2px; border: 1px solid transparent; }
         .sel-row.t1-highlight { background-color: #e7f3ff; border-color: #1877f2; }
         .sel-row.t2-highlight { background-color: #ffeef0; border-color: #dc3545; }
-        .sel-name { flex-grow: 1; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .sel-btn { padding: 4px 10px; margin-left: 4px; width: auto; border: 1px solid #ccd0d5; background: #fff; border-radius: 6px; font-size: 11px; font-weight: bold;}
+        .sel-name { flex-grow: 1; font-weight: 600; font-size: 13px; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sel-btn { padding: 5px 10px; margin-left: 4px; width: auto; border: 1px solid #ccd0d5; background: #fff; border-radius: 6px; font-size: 11px; font-weight: bold;}
         .sel-btn.t1.active { background: #1877f2; color: white; }
         .sel-btn.t2.active { background: #dc3545; color: white; }
         
@@ -305,7 +306,7 @@
         }
 
         function updateUI() {
-            // Ticker Logic with WINNER FIRST
+            // Ticker Logic
             const ticker = document.getElementById('lastResult');
             if(matchHistory.length > 0) {
                 const last = matchHistory[matchHistory.length - 1];
@@ -319,21 +320,29 @@
 
             document.getElementById('formulaText').innerHTML = `<strong>PPG:</strong> (Score + Wins × ${config.winBonus} + Margin × ${config.marginMult}) ÷ Games`;
             
+            // Calculate ranks for badges on main selection grid
+            let rankedPlayers = [...players].filter(p => p.games >= config.minGames).sort((a,b) => (b.points/b.games) - (a.points/a.games));
+            let playerRanks = {};
+            rankedPlayers.forEach((p, i) => { playerRanks[p.name] = i + 1; });
+
             let attendDiv = document.getElementById('attendanceList');
             attendDiv.innerHTML = '';
             players.sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
-                attendDiv.innerHTML += `<div class="player-row"><label for="chk_${p.name}">${p.name}</label><input type="checkbox" id="chk_${p.name}" onchange="toggleAttendance('${p.name}')" ${p.present?'checked':''}></div>`;
+                let rank = playerRanks[p.name];
+                let bHtml = (rank && rank <= 4) ? `<span class="badge badge-${rank}">${rank}</span>` : '';
+                attendDiv.innerHTML += `<div class="player-row"><label for="chk_${p.name}">${bHtml}${p.name}</label><input type="checkbox" id="chk_${p.name}" onchange="toggleAttendance('${p.name}')" ${p.present?'checked':''}></div>`;
             });
 
             let gridDiv = document.getElementById('playerSelectionGrid');
             let present = players.filter(p => p.present);
             gridDiv.innerHTML = '';
             present.forEach(p => {
+                let rank = playerRanks[p.name];
+                let bHtml = (rank && rank <= 4) ? `<span class="badge badge-${rank}">${rank}</span>` : '';
                 let highlightClass = (teamSelections[p.name] === 1) ? 't1-highlight' : (teamSelections[p.name] === 2) ? 't2-highlight' : '';
-                gridDiv.innerHTML += `<div class="sel-row ${highlightClass}"><div class="sel-name">${p.name}</div><button class="sel-btn t1 ${teamSelections[p.name]===1?'active':''}" onclick="toggleTeamSelection('${p.name}', 1)">T1</button><button class="sel-btn t2 ${teamSelections[p.name]===2?'active':''}" onclick="toggleTeamSelection('${p.name}', 2)">T2</button></div>`;
+                gridDiv.innerHTML += `<div class="sel-row ${highlightClass}"><div class="sel-name">${bHtml}${p.name}</div><button class="sel-btn t1 ${teamSelections[p.name]===1?'active':''}" onclick="toggleTeamSelection('${p.name}', 1)">T1</button><button class="sel-btn t2 ${teamSelections[p.name]===2?'active':''}" onclick="toggleTeamSelection('${p.name}', 2)">T2</button></div>`;
             });
 
-            // History with WINNER FIRST
             let histDiv = document.getElementById('historyList');
             histDiv.innerHTML = '';
             [...matchHistory].reverse().forEach(m => {
@@ -345,11 +354,9 @@
                 histDiv.innerHTML += `<div class="history-item"><div class="hist-meta">${dStr}</div><div class="hist-main"><div><b>${wSc}-${lSc}</b> <span style="color:#888; font-size:11px">(${wN.join(",")}) beat (${lN.join(",")})</span></div><div class="action-btns"><button class="btn-warning" onclick="editMatch(${m.id})">Edit</button><button class="btn-danger" onclick="deleteMatch(${m.id})">X</button></div></div></div>`;
             });
 
-            // Individual Leaderboard with TOP 4 BADGES
-            let ranked = players.filter(p => p.games >= config.minGames).sort((a,b) => (b.points/b.games) - (a.points/a.games));
             let tbody = document.getElementById('leaderboardBody');
             tbody.innerHTML = '';
-            ranked.forEach((p, i) => {
+            rankedPlayers.forEach((p, i) => {
                 let rankNum = i + 1;
                 let badgeHtml = rankNum <= 4 ? `<span class="badge badge-${rankNum}">${rankNum}</span>` : `<span style="margin-right:26px;"></span>`;
                 tbody.innerHTML += `<tr><td>${rankNum}</td><td style="text-align:left">${badgeHtml}${p.name}</td><td>${p.games}</td><td><span class="w-l">${p.wins}W/${p.losses}L</span></td><td><b>${(p.points/(p.games||1)).toFixed(1)}</b></td></tr>`;
