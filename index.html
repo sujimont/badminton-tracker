@@ -17,18 +17,7 @@
         input, button { padding: 8px; margin: 2px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 14px; }
         button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; }
         
-        .last-result-ticker { 
-            background: #e7f3ff; 
-            border: 2px solid #1877f2; 
-            border-radius: 10px; 
-            padding: 10px; 
-            margin-bottom: 10px; 
-            font-size: 14px; 
-            text-align: center; 
-            color: #004494; 
-            display: none; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
+        .last-result-ticker { background: #e7f3ff; border: 2px solid #1877f2; border-radius: 10px; padding: 10px; margin-bottom: 10px; font-size: 14px; text-align: center; color: #004494; display: none; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
         /* Badge and Alignment Logic */
         .badge { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; color: white; font-size: 10px; font-weight: bold; margin-right: 10px; vertical-align: middle; flex-shrink: 0; }
@@ -66,6 +55,7 @@
         .action-btns { display: flex; gap: 4px; }
         .btn-danger { background-color: #dc3545; padding: 4px 8px; font-size: 10px; width: auto; }
         .btn-warning { background-color: #ffc107; color: #333; padding: 4px 8px; font-size: 10px; width: auto; }
+        .btn-super-del { background-color: #000; color: #fff; font-size: 11px; margin-bottom: 8px; }
 
         .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; box-shadow: 0 -2px 8px rgba(0,0,0,0.1); padding: 4px 0; padding-bottom: env(safe-area-inset-bottom, 4px); }
         .tab-btn { background: none; border: none; color: #666; font-size: 9px; font-weight: bold; display: flex; flex-direction: column; align-items: center; width: 16%; }
@@ -75,7 +65,7 @@
         #syncStatus { font-size: 9px; color: #e0e0e0; float: right; margin-top: 3px; }
 
         @media print {
-            .tab-bar, .action-btns, .header { display: none !important; }
+            .tab-bar, .action-btns, .header, .btn-secondary, .btn-super-del { display: none !important; }
             body { padding: 0; background: white; }
             .card { box-shadow: none; border: 1px solid #eee; }
         }
@@ -83,7 +73,7 @@
 </head>
 <body>
 
-    <div class="header">🏸 Fit Boys Badminton Tracker <span id="syncStatus">🔄 ...</span></div>
+    <div class="header">🏸 Fit Boys Tracker <span id="syncStatus">🔄 ...</span></div>
 
     <div class="container">
         <div id="tab-play" class="tab-content active">
@@ -134,7 +124,10 @@
         <div id="tab-history" class="tab-content">
             <div class="card">
                 <h3>History</h3>
-                <button style="background-color:#6c757d; color:white; font-size:12px; margin-bottom:6px;" onclick="window.print()">🖨️ PDF Report</button>
+                <div style="display: flex; gap: 5px;">
+                    <button class="btn-secondary" style="background-color:#6c757d; color:white; font-size:11px;" onclick="window.print()">🖨️ PDF Report</button>
+                    <button class="btn-super-del" onclick="deleteAllGames()">🗑️ Delete All Games</button>
+                </div>
                 <div id="historyList"></div>
             </div>
         </div>
@@ -208,7 +201,7 @@
         function saveToCloud() { cloudDoc.set({ players, matchHistory, config }); }
 
         function auth(pwd) {
-            const entry = prompt("Enter Password:");
+            const entry = prompt("Enter Authorization Password:");
             if (entry === pwd) return true;
             if (entry !== null) alert("❌ Incorrect Authorization");
             return false;
@@ -283,6 +276,17 @@
             if(auth(SUPER_PWD)) { matchHistory = matchHistory.filter(m => m.id !== id); recalculateStats(); saveToCloud(); }
         }
 
+        function deleteAllGames() {
+            if(auth(SUPER_PWD)) {
+                if(confirm("⚠️ ARE YOU SURE? This will permanently wipe all match history!")) {
+                    matchHistory = [];
+                    recalculateStats();
+                    saveToCloud();
+                    alert("✅ All game history deleted.");
+                }
+            }
+        }
+
         function editMatch(id) {
             if(auth(SUPER_PWD)) {
                 let m = matchHistory.find(x => x.id === id);
@@ -307,7 +311,6 @@
         }
 
         function updateUI() {
-            // Ticker Logic
             const ticker = document.getElementById('lastResult');
             if(matchHistory.length > 0) {
                 const last = matchHistory[matchHistory.length - 1];
@@ -317,16 +320,14 @@
                 let lS = (last.s1 >= last.s2) ? last.s2 : last.s1;
                 ticker.innerHTML = `🏆 <b>Latest Winner</b><br>${wT.join(" & ")} (<b>${wS}</b>) def. ${lT.join(" & ")} (<b>${lS}</b>)`;
                 ticker.style.display = 'block';
-            }
+            } else { ticker.style.display = 'none'; }
 
             document.getElementById('formulaText').innerHTML = `<strong>PPG:</strong> (Score + Wins × ${config.winBonus} + Margin × ${config.marginMult}) ÷ Games`;
             
-            // Rank calculations
             let rankedPlayers = [...players].filter(p => p.games >= config.minGames).sort((a,b) => (b.points/b.games) - (a.points/a.games));
             let playerRanks = {};
             rankedPlayers.forEach((p, i) => { playerRanks[p.name] = i + 1; });
 
-            // Roster List (with placeholders)
             let attendDiv = document.getElementById('attendanceList');
             attendDiv.innerHTML = '';
             players.sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
@@ -335,7 +336,6 @@
                 attendDiv.innerHTML += `<div class="player-row"><label for="chk_${p.name}">${bHtml}${p.name}</label><input type="checkbox" id="chk_${p.name}" onchange="toggleAttendance('${p.name}')" ${p.present?'checked':''}></div>`;
             });
 
-            // Selection Grid (with placeholders)
             let gridDiv = document.getElementById('playerSelectionGrid');
             let present = players.filter(p => p.present);
             gridDiv.innerHTML = '';
@@ -357,7 +357,6 @@
                 histDiv.innerHTML += `<div class="history-item"><div class="hist-meta">${dStr}</div><div class="hist-main"><div><b>${wSc}-${lSc}</b> <span style="color:#888; font-size:11px">(${wN.join(",")}) beat (${lN.join(",")})</span></div><div class="action-btns"><button class="btn-warning" onclick="editMatch(${m.id})">Edit</button><button class="btn-danger" onclick="deleteMatch(${m.id})">X</button></div></div></div>`;
             });
 
-            // Leaderboard
             let tbody = document.getElementById('leaderboardBody');
             tbody.innerHTML = '';
             rankedPlayers.forEach((p, i) => {
@@ -366,7 +365,6 @@
                 tbody.innerHTML += `<tr><td>${rankNum}</td><td style="text-align:left">${badgeHtml}${p.name}</td><td>${p.games}</td><td><span class="w-l">${p.wins}W/${p.losses}L</span></td><td><b>${(p.points/(p.games||1)).toFixed(1)}</b></td></tr>`;
             });
 
-            // Pairs
             let pairs = {};
             matchHistory.forEach(m => {
                 [{names: m.t1, score: m.s1, opp: m.s2}, {names: m.t2, score: m.s2, opp: m.s1}].forEach(t => {
