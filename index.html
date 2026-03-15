@@ -9,11 +9,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 0; margin: 0; background-color: #f0f2f5; color: #1c1e21; padding-bottom: 55px; overflow-x: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 0; margin: 0; background-color: #f0f2f5; color: #1c1e21; padding-bottom: 60px; overflow-x: hidden; }
         .header { background-color: #1877f2; color: white; padding: 8px; text-align: center; font-size: 15px; font-weight: bold; position: sticky; top: 0; z-index: 1001; }
         .container { padding: 6px; max-width: 600px; margin: auto; }
         h3 { margin-top: 0; font-size: 13px; color: #333; border-bottom: 1px solid #eee; padding-bottom: 3px; margin-bottom: 5px;}
-        .card { background: white; padding: 8px; margin-bottom: 6px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card { background: white; padding: 8px; margin-bottom: 6px; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
         input, button { padding: 8px; margin: 2px 0; width: 100%; box-sizing: border-box; border: 1px solid #ccd0d5; border-radius: 8px; font-size: 14px; }
         button { background-color: #28a745; color: white; border: none; font-weight: bold; cursor: pointer; }
         
@@ -41,6 +41,8 @@
         .sel-btn.t1.active { background: #1877f2; color: white; }
         .sel-btn.t2.active { background: #dc3545; color: white; }
         
+        /* Pinned bottom alignment */
+        .bottom-controls { margin-top: auto; padding-top: 10px; }
         .match-box { display: flex; justify-content: space-between; align-items: center; gap: 6px; background: #f8f9fa; padding: 6px; border-radius: 8px; margin-bottom: 6px;}
         .team-input { width: 45%; }
         .team-input input { text-align: center; font-size: 18px; font-weight: bold; padding: 4px; margin: 0;}
@@ -48,6 +50,9 @@
         .history-item { padding: 8px 0; border-bottom: 1px solid #eee; }
         .hist-meta { font-size: 10px; color: #888; font-weight: bold;}
         .hist-main { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+        .action-btns { display: flex; gap: 4px; }
+        .btn-danger { background-color: #dc3545; padding: 4px 8px; font-size: 10px; width: auto; }
+        .btn-warning { background-color: #ffc107; color: #333; padding: 4px 8px; font-size: 10px; width: auto; }
 
         .tab-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; display: flex; justify-content: space-around; box-shadow: 0 -2px 8px rgba(0,0,0,0.1); padding: 4px 0; padding-bottom: env(safe-area-inset-bottom, 4px); }
         .tab-btn { background: none; border: none; color: #666; font-size: 9px; font-weight: bold; display: flex; flex-direction: column; align-items: center; width: 16%; }
@@ -55,6 +60,12 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         #syncStatus { font-size: 9px; color: #e0e0e0; float: right; margin-top: 3px; }
+
+        @media print {
+            .tab-bar, .action-btns, .btn-secondary, .header { display: none !important; }
+            body { padding: 0; background: white; }
+            .card { box-shadow: none; border: 1px solid #eee; }
+        }
     </style>
 </head>
 <body>
@@ -64,14 +75,17 @@
     <div class="container">
         <div id="tab-play" class="tab-content active">
             <div id="lastResult" class="last-result-ticker"></div>
-            <div class="card">
-                <div id="playerSelectionGrid"></div>
-                <div class="match-box">
-                    <div class="team-input"><input type="number" id="score1" placeholder="T1" inputmode="numeric"></div>
-                    <div style="font-weight:bold; color:#999; font-size:12px">VS</div>
-                    <div class="team-input"><input type="number" id="score2" placeholder="T2" inputmode="numeric"></div>
+            <div class="card" style="min-height: 70vh;">
+                <div id="playerSelectionGrid" style="flex-grow: 1;"></div>
+                
+                <div class="bottom-controls">
+                    <div class="match-box">
+                        <div class="team-input"><input type="number" id="score1" placeholder="T1" inputmode="numeric"></div>
+                        <div style="font-weight:bold; color:#999; font-size:12px">VS</div>
+                        <div class="team-input"><input type="number" id="score2" placeholder="T2" inputmode="numeric"></div>
+                    </div>
+                    <button onclick="recordScore()">Submit Match</button>
                 </div>
-                <button onclick="recordScore()">Submit Match</button>
             </div>
         </div>
 
@@ -108,7 +122,7 @@
         <div id="tab-history" class="tab-content">
             <div class="card">
                 <h3>History</h3>
-                <button style="background-color:#6c757d; color:white; font-size:12px; margin-bottom:6px;" onclick="window.print()">🖨️ PDF Report</button>
+                <button class="btn-secondary" style="background-color:#6c757d; color:white; font-size:12px; margin-bottom:6px;" onclick="window.print()">🖨️ PDF Report</button>
                 <div id="historyList"></div>
             </div>
         </div>
@@ -117,10 +131,11 @@
             <div class="card">
                 <h3>Scoring Config</h3>
                 <div style="font-size:11px; display:grid; grid-template-columns: 1fr 50px; gap:8px; align-items:center;">
-                    <label>Win Bonus:</label><input type="number" id="winBonus" onchange="updateSettings()">
-                    <label>Margin Multi:</label><input type="number" id="marginMult" onchange="updateSettings()">
-                    <label>Min Games:</label><input type="number" id="minGames" onchange="updateSettings()">
+                    <label>Win Bonus:</label><input type="number" id="winBonus">
+                    <label>Margin Multi:</label><input type="number" id="marginMult">
+                    <label>Min Games:</label><input type="number" id="minGames">
                 </div>
+                <button onclick="updateSettings()" style="margin-top:8px; background-color:#1877f2;">Save Configuration</button>
             </div>
             <div class="card">
                 <h3>Players</h3>
@@ -142,10 +157,8 @@
     </div>
 
     <script>
-        // HASHED PASSWORDS
-        const H_ADMIN = "suji"; // Display logic uses simple check
-        const H_SUPER = "P@ssword";
-
+        const ADMIN_PWD = "suji"; 
+        const SUPER_PWD = "P@ssword";
         const firebaseConfig = {
           apiKey: "AIzaSyCn2ZdRrvfFWFJFiRbPmJi2galq768OPH4",
           authDomain: "badmintontracker-d565c.firebaseapp.com",
@@ -182,15 +195,21 @@
 
         function saveToCloud() { cloudDoc.set({ players, matchHistory, config }); }
 
-        function auth(pwd) { return prompt("Enter Authorization:") === pwd; }
+        function auth(pwd) {
+            const entry = prompt("Enter Password:");
+            if (entry === pwd) return true;
+            if (entry !== null) alert("❌ Incorrect Authorization");
+            return false;
+        }
 
         function updateSettings() {
-            if(!auth(H_ADMIN)) { updateUI(); return; }
+            if(!auth(ADMIN_PWD)) return;
             config.winBonus = parseInt(document.getElementById('winBonus').value) || 0;
             config.marginMult = parseInt(document.getElementById('marginMult').value) || 0;
             config.minGames = parseInt(document.getElementById('minGames').value) || 1;
             recalculateStats();
             saveToCloud();
+            alert("✅ Configuration Saved");
         }
 
         function switchTab(tabId, btn) {
@@ -201,7 +220,6 @@
         }
 
         function addPlayer() {
-            if(!auth(H_ADMIN)) return;
             let name = document.getElementById('playerName').value.trim();
             if (name && !players.find(p => p.name === name)) {
                 players.push({ name, present: true, games: 0, points: 0, wins: 0, losses: 0 });
@@ -229,7 +247,7 @@
             let t2 = Object.keys(teamSelections).filter(n => teamSelections[n] === 2);
             let s1 = parseInt(document.getElementById('score1').value);
             let s2 = parseInt(document.getElementById('score2').value);
-            if (t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Select 2 players per team & enter scores.");
+            if (t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Select teams and enter scores.");
             matchHistory.push({ t1, t2, s1, s2, id: Date.now() });
             document.getElementById('score1').value = ''; document.getElementById('score2').value = '';
             teamSelections = {}; recalculateStats(); saveToCloud();
@@ -250,11 +268,11 @@
         }
 
         function deleteMatch(id) {
-            if(auth(H_SUPER)) { matchHistory = matchHistory.filter(m => m.id !== id); recalculateStats(); saveToCloud(); }
+            if(auth(SUPER_PWD)) { matchHistory = matchHistory.filter(m => m.id !== id); recalculateStats(); saveToCloud(); }
         }
 
         function editMatch(id) {
-            if(auth(H_SUPER)) {
+            if(auth(SUPER_PWD)) {
                 let m = matchHistory.find(x => x.id === id);
                 let ns1 = prompt("New Score T1:", m.s1);
                 let ns2 = prompt("New Score T2:", m.s2);
@@ -273,7 +291,7 @@
         }
 
         function endSession() {
-            if(auth(H_ADMIN)) { players.forEach(p => p.present = false); teamSelections = {}; saveToCloud(); }
+            if(auth(ADMIN_PWD)) { players.forEach(p => p.present = false); teamSelections = {}; saveToCloud(); }
         }
 
         function updateUI() {
