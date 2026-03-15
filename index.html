@@ -36,8 +36,10 @@
         th, td { padding: 10px 2px; border-bottom: 1px solid #eee; }
         th { color: #888; text-transform: uppercase; font-size: 9px; }
         
-        .player-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px; margin-bottom: 5px; border: 1px solid #eee; }
-        .player-row label { flex-grow: 1; font-weight: 500; font-size: 14px; display: flex; align-items: center; }
+        /* Fixed Aligned Roster Row */
+        .player-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 6px; border: 1px solid #eee; }
+        .player-row label { flex-grow: 1; font-weight: 600; font-size: 15px; display: flex; align-items: center; cursor: pointer; }
+        .player-row input[type="checkbox"] { width: 22px; height: 22px; margin: 0; cursor: pointer; accent-color: #1877f2; }
 
         .sel-row { display: flex; align-items: center; padding: 6px; border-radius: 8px; margin-bottom: 4px; border: 1px solid transparent; }
         .sel-row.t1-highlight { background-color: #e7f3ff; border-color: #1877f2; }
@@ -167,7 +169,6 @@
     </div>
 
     <script>
-        // Use the exact Logic from your previous code
         const ADMIN_PWD = "suji"; 
         const SUPER_PWD = "P@ssword";
         const firebaseConfig = {
@@ -258,7 +259,7 @@
             let t2 = Object.keys(teamSelections).filter(n => teamSelections[n] === 2);
             let s1 = parseInt(document.getElementById('score1').value);
             let s2 = parseInt(document.getElementById('score2').value);
-            if (t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Select teams and enter scores.");
+            if (t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Select teams.");
             matchHistory.push({ t1, t2, s1, s2, id: Date.now() });
             document.getElementById('score1').value = ''; document.getElementById('score2').value = '';
             teamSelections = {}; recalculateStats(); saveToCloud();
