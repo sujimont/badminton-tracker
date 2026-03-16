@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fit Boys Pro: Protected</title>
+    <title>Fit Boys Pro: Master Edition</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
@@ -30,14 +30,14 @@
         th, td { padding: 8px 4px; border-bottom: 1px solid #eee; }
         th { color: #888; font-size: 9px; text-transform: uppercase; }
 
-        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
-        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: none; font-size: 9px; color: #888; min-width: 60px; }
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; white-space: nowrap; }
+        .tab-btn { flex: 1; padding: 15px 5px; border: none; background: none; font-size: 9px; color: #888; min-width: 60px; }
         .tab-btn.active { color: var(--fb-blue); border-top: 2px solid var(--fb-blue); font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        .history-item { font-size: 11px; border-bottom: 1px solid #eee; padding: 8px 0; }
-        .event-tag { font-size: 8px; background: #eee; padding: 2px 4px; border-radius: 3px; }
+        .history-item { font-size: 11px; border-bottom: 1px solid #eee; padding: 10px 0; line-height: 1.4; }
+        .event-tag { font-size: 8px; background: #eee; padding: 2px 4px; border-radius: 3px; font-weight: bold; margin-right: 5px; }
     </style>
 </head>
 <body>
@@ -45,27 +45,27 @@
 <div class="header">🏸 Fit Boys Pro Tracker</div>
 
 <div class="event-selector-bar">
-    <span>View History:</span>
+    <span>Filter Stats:</span>
     <select id="globalEventFilter" onchange="updateUI()" style="padding:4px; font-size:12px; width:auto;"></select>
 </div>
 
 <div class="container">
     <div id="tab-play" class="tab-content active">
         <div class="card">
-            <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Suggest</button></h3>
+            <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
             <div id="selectionGrid"></div>
             <div style="display: flex; gap: 5px; margin-top:10px;">
                 <input type="number" id="s1" placeholder="T1 Score" style="flex:1;" inputmode="numeric">
                 <input type="number" id="s2" placeholder="T2 Score" style="flex:1;" inputmode="numeric">
             </div>
             <p id="lockMessage" style="font-size:11px; text-align:center; margin:10px 0;"></p>
-            <button id="submitBtn" class="btn-blue" onclick="recordMatch()">Submit Match</button>
+            <button id="submitBtn" class="btn-blue" onclick="recordMatch()">Submit Result</button>
         </div>
     </div>
 
     <div id="tab-roster" class="tab-content">
         <div class="card">
-            <h3>Attendance</h3>
+            <h3>Attendance (Checked In)</h3>
             <div id="attendanceList"></div>
         </div>
     </div>
@@ -80,9 +80,26 @@
         </div>
     </div>
 
+    <div id="tab-pairs" class="tab-content">
+        <div class="card">
+            <h3>👥 Pair Dominance</h3>
+            <table>
+                <thead><tr><th>#</th><th style="text-align:left">Pair</th><th>G</th><th>W-L</th><th>Win%</th></tr></thead>
+                <tbody id="pairsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab-hist" class="tab-content">
+        <div class="card">
+            <h3>🕒 Recent History</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
     <div id="tab-admin" class="tab-content">
         <div class="card">
-            <h3>Scoring Rules</h3>
+            <h3>Rules & Config</h3>
             <div style="display:grid; grid-template-columns: 1fr 60px; gap:8px; align-items:center; font-size:12px;">
                 <label>Win Bonus:</label><input type="number" id="winBonus">
                 <label>Margin Multi:</label><input type="number" id="marginMult">
@@ -92,10 +109,10 @@
         </div>
 
         <div class="card">
-            <h3>Event List</h3>
+            <h3>Events</h3>
             <div id="eventAdminList"></div>
             <div style="display:flex; gap:5px; margin-top:10px;">
-                <input type="text" id="newEventName" placeholder="New Event Name" style="flex:1;">
+                <input type="text" id="newEventName" placeholder="Event Name" style="flex:1;">
                 <button style="width:60px;" onclick="addEvent()">Add</button>
             </div>
         </div>
@@ -115,11 +132,12 @@
     <button class="tab-btn active" onclick="switchTab('play', this)">🎮 Play</button>
     <button class="tab-btn" onclick="switchTab('roster', this)">📍 Roster</button>
     <button class="tab-btn" onclick="switchTab('rank', this)">🏆 Rank</button>
+    <button class="tab-btn" onclick="switchTab('pairs', this)">👥 Pairs</button>
+    <button class="tab-btn" onclick="switchTab('hist', this)">🕒 Hist</button>
     <button class="tab-btn" onclick="switchTab('admin', this)">⚙️ Admin</button>
 </div>
 
 <script>
-    // --- AUTH CONFIG ---
     const ADMIN_PWD = "suji"; 
     const SUPER_PWD = "P@ssword";
 
@@ -134,11 +152,11 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const cloudDoc = db.collection('badmintonTracker').doc('masterDataV3');
+    const cloudDoc = db.collection('badmintonTracker').doc('masterDataV4');
 
     let players = [];
     let history = [];
-    let events = [{id: 'default', name: 'Standard', active: true}];
+    let events = [{id: 'default', name: 'Standard Session', active: true}];
     let config = { winBonus: 3, marginMult: 1, minGames: 3 };
     let selections = {};
 
@@ -160,7 +178,6 @@
 
     function save() { cloudDoc.set({ players, history, events, config }); }
 
-    // --- AUTH FUNCTION ---
     function auth(pwd) {
         const entry = prompt("Enter Password:");
         if (entry === pwd) return true;
@@ -181,7 +198,6 @@
         config.marginMult = parseInt(document.getElementById('marginMult').value) || 0;
         config.minGames = parseInt(document.getElementById('minGames').value) || 1;
         save();
-        alert("Rules Saved!");
     }
 
     function addPlayer() {
@@ -230,7 +246,7 @@
 
     function suggestTeams() {
         const pool = players.filter(p => p.present).sort((a,b) => a.lastPlayed - b.lastPlayed).slice(0,4);
-        if(pool.length < 4) return alert("Need 4 players!");
+        if(pool.length < 4) return alert("Need 4 checked-in players!");
         pool.sort((a,b) => a.skill - b.skill);
         selections = {};
         selections[pool[0].name] = 1; selections[pool[3].name] = 1;
@@ -244,7 +260,7 @@
         const t2 = Object.keys(selections).filter(n => selections[n] === 2);
         const s1 = parseInt(document.getElementById('s1').value);
         const s2 = parseInt(document.getElementById('s2').value);
-        if(t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Missing data!");
+        if(t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Data missing!");
         const now = Date.now();
         history.push({ t1, t2, s1, s2, eventId: ev.id, time: now });
         [...t1, ...t2].forEach(n => { let p = players.find(x => x.name === n); if(p) p.lastPlayed = now; });
@@ -263,11 +279,12 @@
 
         const btn = document.getElementById('submitBtn');
         const msg = document.getElementById('lockMessage');
-        if(!activeEv) { btn.disabled = true; msg.innerHTML = "⚠️ <b style='color:red'>ALL EVENTS CLOSED.</b>"; }
+        if(!activeEv) { btn.disabled = true; msg.innerHTML = "⚠️ <b style='color:red'>ALL SESSIONS CLOSED.</b>"; }
         else { btn.disabled = false; msg.innerHTML = `Saving to: <b>${activeEv.name}</b>`; }
 
         const fHist = filterId === 'all' ? history : history.filter(m => m.eventId === filterId);
 
+        // Leaderboard
         let st = {}; players.forEach(p => st[p.name] = {g:0, w:0, l:0, pts:0});
         fHist.forEach(m => {
             const diff = Math.abs(m.s1 - m.s2);
@@ -288,10 +305,31 @@
 
         document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.w}W-${p.l}L</td><td><b>${(p.pts/p.g).toFixed(1)}</b></td></tr>`).join('');
 
+        // PAIRS (RESTORED LOGIC)
+        let ps = {};
+        fHist.forEach(m => {
+            [{t:m.t1, s:m.s1, o:m.s2}, {t:m.t2, s:m.s2, o:m.s1}].forEach(x => {
+                const k = x.t.sort().join(" & ");
+                if(!ps[k]) ps[k] = {g:0, w:0, l:0};
+                ps[k].g++; if(x.s > x.o) ps[k].w++; else ps[k].l++;
+            });
+        });
+        const sPairs = Object.keys(ps).map(k => ({n:k, ...ps[k]})).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
+        document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}W-${p.l}L</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
+
+        // HISTORY (RESTORED LOGIC)
+        document.getElementById('historyList').innerHTML = [...fHist].reverse().map(m => `
+            <div class="history-item">
+                <span class="event-tag">${events.find(e => e.id === m.eventId)?.name || 'General'}</span>
+                <b>${m.s1}-${m.s2}</b> <span style="color:#666">(${m.t1.join(",")})</span> beat <span style="color:#666">(${m.t2.join(",")})</span>
+            </div>
+        `).join('');
+
+        // GRID & OTHER UI
         document.getElementById('selectionGrid').innerHTML = players.filter(p => p.present).map(p => `<div class="player-row" style="background:${selections[p.name]==1?'#e7f3ff':selections[p.name]==2?'#ffeef0':'#fff'}"><span>${p.name} <span class="badge">S${p.skill}</span></span><div><button class="btn-outline" onclick="selectTeam('${p.name}', 1)">T1</button> <button class="btn-outline" onclick="selectTeam('${p.name}', 2)">T2</button></div></div>`).join('');
-        document.getElementById('attendanceList').innerHTML = players.map(p => `<div class="player-row"><label>${p.name}</label><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"></div>`).join('');
+        document.getElementById('attendanceList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="player-row"><label>${p.name}</label><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"></div>`).join('');
         document.getElementById('eventAdminList').innerHTML = events.map(e => `<div class="player-row"><span>${e.name} <small>(${e.active?'Active':'Closed'})</small></span><button class="btn-outline" onclick="toggleEvent('${e.id}')">${e.active?'Close':'Open'}</button></div>`).join('');
-        document.getElementById('adminPlayerList').innerHTML = players.map(p => `<div class="player-row"><span>${p.name}</span><button class="btn-outline" style="color:red" onclick="deletePlayer('${p.name}')">🗑️</button></div>`).join('');
+        document.getElementById('adminPlayerList').innerHTML = players.map(p => `<div class="player-row"><span>${p.name} <span class="badge">Skill ${p.skill}</span></span><button class="btn-outline" style="color:red" onclick="deletePlayer('${p.name}')">🗑️</button></div>`).join('');
     }
 </script>
 </body>
