@@ -21,17 +21,24 @@
         .btn-blue { background: var(--fb-blue); }
         .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 10px; width: auto; padding: 4px 8px; }
         
-        /* 3-Column Play Screen */
+        /* 3-Column Play Screen with Perfect Alignment */
         .selection-grid { display: grid; grid-template-columns: 1fr 50px 50px; gap: 5px; align-items: center; margin-bottom: 5px; }
-        .player-name-cell { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #eee; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .t-btn { height: 35px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #666; font-weight: bold; cursor: pointer; }
+        .player-name-cell { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #eee; font-size: 13px; display: flex; align-items: center; }
+        .t-btn { height: 35px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #666; font-weight: bold; }
         .t1-active .t-btn-1 { background: var(--fb-blue); color: #fff; border-color: var(--fb-blue); }
         .t2-active .t-btn-2 { background: var(--fb-red); color: #fff; border-color: var(--fb-red); }
         .t1-active .player-name-cell { background: #e7f3ff; border-color: var(--fb-blue); }
         .t2-active .player-name-cell { background: #ffeef0; border-color: var(--fb-red); }
 
-        .badge { display: inline-block; width: 16px; height: 16px; border-radius: 50%; color: white; font-size: 9px; text-align: center; line-height: 16px; font-weight: bold; margin-right: 5px; }
+        /* Badge and Placeholder for alignment */
+        .badge, .badge-placeholder { display: inline-block; width: 18px; height: 18px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+        .badge { color: white; font-size: 10px; text-align: center; line-height: 18px; font-weight: bold; }
         .badge-1 { background: var(--fb-gold); color: #000; } .badge-2 { background: #c0c0c0; color: #000; } .badge-3 { background: #cd7f32; }
+
+        /* Single-Row Roster Styling */
+        .roster-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #fff; border-radius: 10px; margin-bottom: 5px; border: 1px solid #eee; }
+        .roster-left { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
+        .roster-right { display: flex; align-items: center; gap: 8px; }
 
         table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
         th, td { padding: 8px 4px; border-bottom: 1px solid #eee; }
@@ -41,9 +48,6 @@
         .tab-btn.active { color: var(--fb-blue); border-top: 2px solid var(--fb-blue); font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        
-        .history-item { font-size: 11px; border-bottom: 1px solid #eee; padding: 8px 0; display: flex; align-items: center; justify-content: space-between; }
-        @media print { .tab-bar, .header, .btn-outline, .btn-blue { display: none !important; } }
     </style>
 </head>
 <body>
@@ -83,23 +87,6 @@
         </div>
     </div>
 
-    <div id="tab-pairs" class="tab-content">
-        <div class="card">
-            <h3>👥 Dominant Pairs</h3>
-            <table>
-                <thead><tr><th>#</th><th style="text-align:left">Pair</th><th>G</th><th>W-L</th><th>Win%</th></tr></thead>
-                <tbody id="pairsBody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <div id="tab-hist" class="tab-content">
-        <div class="card">
-            <h3>🕒 History <button class="btn-outline" onclick="window.print()">Print Report</button></h3>
-            <div id="historyList"></div>
-        </div>
-    </div>
-
     <div id="tab-admin" class="tab-content">
         <div class="card">
             <h3>Add New Player</h3>
@@ -120,14 +107,6 @@
             </div>
             <button onclick="updateSettings()" style="margin-top:8px; background:var(--fb-blue);">Save Rules</button>
         </div>
-        <div class="card">
-            <h3>Session Management</h3>
-            <div id="eventAdminList"></div>
-            <div style="display:flex; gap:5px; margin-top:10px;">
-                <input type="text" id="newEventName" placeholder="New Event" style="flex:1;">
-                <button style="width:75px;" onclick="addEvent()">Create</button>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -135,8 +114,6 @@
     <button class="tab-btn active" onclick="switchTab('play', this)">🎮 Play</button>
     <button class="tab-btn" onclick="switchTab('roster', this)">📍 Roster</button>
     <button class="tab-btn" onclick="switchTab('rank', this)">🏆 Rank</button>
-    <button class="tab-btn" onclick="switchTab('pairs', this)">👥 Pairs</button>
-    <button class="tab-btn" onclick="switchTab('hist', this)">🕒 Hist</button>
     <button class="tab-btn" onclick="switchTab('admin', this)">⚙️ Admin</button>
 </div>
 
@@ -153,6 +130,7 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    // DATABASE NAME LOCKED
     const cloudDoc = db.collection('badmintonTracker').doc('FitBoys_Permanent_Data');
 
     let players = []; let history = []; let events = [{id:'def', name:'Season 1', active:true}];
@@ -192,12 +170,51 @@
         }
     }
 
-    function updateSettings() {
-        if(!auth(ADMIN_PWD)) return;
-        config.winBonus = parseFloat(document.getElementById('winBonus').value);
-        config.marginMult = parseFloat(document.getElementById('marginMult').value);
-        config.minGames = parseInt(document.getElementById('minGames').value);
-        save();
+    function updateUI() {
+        const ef = document.getElementById('rankEventFilter');
+        const cur = ef.value;
+        ef.innerHTML = '<option value="all">Lifetime</option>';
+        events.forEach(e => ef.innerHTML += `<option value="${e.id}" ${cur==e.id?'selected':''}>${e.name}</option>`);
+
+        let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0});
+        history.forEach(m => {
+            [...m.t1, ...m.t2].forEach(n => {
+                if(!st[n]) return; st[n].g++;
+                const isT1 = m.t1.includes(n);
+                const won = (isT1 && m.s1 > m.s2) || (!isT1 && m.s2 > m.s1);
+                st[n].pts += (isT1 ? m.s1 : m.s2) + (won ? config.winBonus : 0);
+            });
+        });
+        const sorted = Object.keys(st).map(n => ({name:n, ...st[n]})).filter(p => p.pts > 0).sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
+        const top3Names = sorted.slice(0,3).map(x => x.name);
+
+        // PLAY TAB (3-Column Alignment)
+        document.getElementById('selectionListContainer').innerHTML = players.filter(p => p.present).map(p => {
+            const r = top3Names.indexOf(p.name) + 1;
+            const bHtml = r > 0 ? `<span class="badge badge-${r}">${r}</span>` : `<span class="badge-placeholder"></span>`;
+            const t = selections[p.name];
+            return `<div class="selection-grid ${t==1?'t1-active':t==2?'t2-active':''}">
+                <div class="player-name-cell">${bHtml} <b>${p.name}</b></div>
+                <button class="t-btn t-btn-1" onclick="selectTeam('${p.name}', 1)">T1</button>
+                <button class="t-btn t-btn-2" onclick="selectTeam('${p.name}', 2)">T2</button>
+            </div>`;
+        }).join('');
+
+        // ROSTER TAB (Single Row Fixed)
+        document.getElementById('rosterList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `
+            <div class="roster-row">
+                <div class="roster-left">
+                    <input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')" style="width:20px; height:20px;">
+                    <b>${p.name}</b>
+                </div>
+                <div class="roster-right">
+                    <input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px; padding:2px; margin:0;">
+                    <button class="btn-outline" style="color:red; border-color:red; padding:2px 8px;" onclick="deletePlayer('${p.name}')">🗑️</button>
+                </div>
+            </div>`).join('');
+
+        // RANKINGS
+        document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.name}</td><td>${p.g}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`).join('');
     }
 
     function selectTeam(name, team) {
@@ -210,83 +227,22 @@
     }
 
     function recordMatch() {
-        const ev = events.find(e => e.active);
         const t1 = Object.keys(selections).filter(n => selections[n] === 1);
         const t2 = Object.keys(selections).filter(n => selections[n] === 2);
         const s1 = parseInt(document.getElementById('s1').value);
         const s2 = parseInt(document.getElementById('s2').value);
         if(!t1.length || isNaN(s1)) return;
-        history.push({ t1, t2, s1, s2, eventId: ev.id, time: Date.now(), id: Date.now() });
+        history.push({ t1, t2, s1, s2, id: Date.now() });
         [...t1, ...t2].forEach(n => { const p = players.find(x => x.name === n); if(p) p.lastPlayed = Date.now(); });
         selections = {}; document.getElementById('s1').value = ''; document.getElementById('s2').value = '';
         save();
     }
 
-    function updateUI() {
-        const ef = document.getElementById('rankEventFilter');
-        const cur = ef.value;
-        ef.innerHTML = '<option value="all">Lifetime</option>';
-        events.forEach(e => ef.innerHTML += `<option value="${e.id}" ${cur==e.id?'selected':''}>${e.name}</option>`);
-
-        // Rankings Logic (Filtering out 0-pointers for Badges)
-        let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0, w:0, l:0});
-        history.forEach(m => {
-            const diff = Math.abs(m.s1 - m.s2);
-            [...m.t1, ...m.t2].forEach(n => {
-                if(!st[n]) return; st[n].g++;
-                const isT1 = m.t1.includes(n);
-                const won = (isT1 && m.s1 > m.s2) || (!isT1 && m.s2 > m.s1);
-                const bonus = won ? (config.winBonus + (diff * config.marginMult)) : 0;
-                st[n].pts += (isT1 ? m.s1 : m.s2) + bonus;
-                if(won) st[n].w++; else st[n].l++;
-            });
-        });
-        const sortedWithPoints = Object.keys(st).map(n => ({name:n, ...st[n]})).filter(p => p.pts > 0).sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
-        const top3Names = sortedWithPoints.slice(0,3).map(x => x.name);
-
-        // PLAY TAB (3-Column Layout)
-        document.getElementById('selectionListContainer').innerHTML = players.filter(p => p.present).map(p => {
-            const r = top3Names.indexOf(p.name) + 1;
-            const t = selections[p.name];
-            return `<div class="selection-grid ${t==1?'t1-active':t==2?'t2-active':''}">
-                <div class="player-name-cell">${r>0?`<span class="badge badge-${r}">${r}</span>`:''}${p.name}</div>
-                <button class="t-btn t-btn-1" onclick="selectTeam('${p.name}', 1)">T1</button>
-                <button class="t-btn t-btn-2" onclick="selectTeam('${p.name}', 2)">T2</button>
-            </div>`;
-        }).join('');
-
-        // ROSTER TAB
-        document.getElementById('rosterList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `
-            <div class="player-row">
-                <span><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b></span>
-                <div style="display:flex; gap:5px;"><input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px; padding:2px; margin:0;"><button class="btn-outline" style="color:red;" onclick="deletePlayer('${p.name}')">🗑️</button></div>
-            </div>`).join('');
-
-        // HISTORY
-        const filterId = document.getElementById('rankEventFilter').value || 'all';
-        const fHist = filterId === 'all' ? history : history.filter(m => m.eventId === filterId);
-        document.getElementById('historyList').innerHTML = [...fHist].reverse().map(m => {
-            const w1 = m.s1 >= m.s2;
-            return `<div class="history-item">
-                <div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small></div>
-                <div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button></div>
-            </div>`;
-        }).join('');
-
-        // LEADERBOARD
-        const sortedAll = Object.keys(st).map(n => ({name:n, ...st[n]})).sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
-        const fSorted = sortedAll.filter(p => p.g >= (filterId === 'all' ? 1 : config.minGames));
-        document.getElementById('leaderboardBody').innerHTML = fSorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.name}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`).join('');
-    }
-
-    // Helper functions for events/players
-    function addEvent() { if(!auth(ADMIN_PWD)) return; const n = document.getElementById('newEventName').value.trim(); if(n) { events.forEach(e => e.active = false); events.push({id:'ev_'+Date.now(), name:n, active:true}); save(); } }
-    function toggleEvent(id) { if(!auth(ADMIN_PWD)) return; const ev = events.find(e => e.id === id); if(ev.active) ev.active = false; else { events.forEach(e => e.active = false); ev.active = true; } save(); }
+    function updateSettings() { if(!auth(ADMIN_PWD)) return; config.winBonus = parseFloat(document.getElementById('winBonus').value); config.marginMult = parseFloat(document.getElementById('marginMult').value); config.minGames = parseInt(document.getElementById('minGames').value); save(); }
     function deletePlayer(name) { if(auth(SUPER_PWD)) { players = players.filter(p => p.name !== name); save(); } }
     function updateSkill(name, val) { const p = players.find(x => x.name === name); if(p) { p.skill = parseInt(val); save(); } }
     function togglePresence(name) { const p = players.find(x => x.name === name); if(p) { p.present = !p.present; save(); } }
-    function editMatch(id) { if(!auth(SUPER_PWD)) return; let m = history.find(x => x.id === id); let ns1 = prompt("New T1 Score:", m.s1); let ns2 = prompt("New T2 Score:", m.s2); if(ns1 !== null) { m.s1 = parseInt(ns1); m.s2 = parseInt(ns2); save(); } }
-    function suggestTeams() { const pool = players.filter(p => p.present).sort((a,b) => a.lastPlayed - b.lastPlayed).slice(0,4); if(pool.length < 4) return alert("Need 4 players!"); pool.sort((a,b) => a.skill - b.skill); selections = {}; selections[pool[0].name] = 1; selections[pool[3].name] = 1; selections[pool[1].name] = 2; selections[pool[2].name] = 2; updateUI(); }
+    function suggestTeams() { const pool = players.filter(p => p.present).sort((a,b) => a.lastPlayed - b.lastPlayed).slice(0,4); pool.sort((a,b) => a.skill - b.skill); selections = {}; selections[pool[0].name] = 1; selections[pool[3].name] = 1; selections[pool[1].name] = 2; selections[pool[2].name] = 2; updateUI(); }
 </script>
 </body>
 </html>
