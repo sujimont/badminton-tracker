@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fit Boys Pro: Session Manager</title>
+    <title>Fit Boys Pro: All-in-One</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
@@ -24,50 +24,56 @@
         .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 11px; width: auto; padding: 5px 10px; }
         
         .player-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 10px; margin-bottom: 5px; border: 1px solid #eee; }
-        .status-badge { font-size: 9px; padding: 2px 6px; border-radius: 4px; color: white; font-weight: bold; }
-        .status-active { background: var(--fb-green); }
-        .status-closed { background: var(--fb-red); }
+        .badge { font-size: 10px; background: #e7f3ff; color: #1877f2; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         
-        table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }
-        th, td { padding: 10px 5px; border-bottom: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
+        th, td { padding: 8px 4px; border-bottom: 1px solid #eee; }
+        th { color: #888; font-size: 9px; text-transform: uppercase; }
 
-        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); }
-        .tab-btn { flex: 1; padding: 12px; border: none; background: none; font-size: 10px; color: #888; }
-        .tab-btn.active { color: var(--fb-blue); border-top: 2px solid var(--fb-blue); }
+        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: none; font-size: 9px; color: #888; min-width: 60px; }
+        .tab-btn.active { color: var(--fb-blue); border-top: 2px solid var(--fb-blue); font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
-        .event-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .history-item { font-size: 11px; border-bottom: 1px solid #eee; padding: 8px 0; }
+        .event-tag { font-size: 8px; background: #eee; padding: 2px 4px; border-radius: 3px; }
+        .delete-icon { color: var(--fb-red); font-weight: bold; cursor: pointer; padding: 5px; }
     </style>
 </head>
 <body>
 
-<div class="header">🏸 Fit Boys Pro: Event Manager</div>
+<div class="header">🏸 Fit Boys Pro: Master Edition</div>
 
 <div class="event-selector-bar">
-    <span>Viewing History/Rank:</span>
-    <select id="globalEventFilter" onchange="updateUI()" style="padding:4px; font-size:12px; width:auto;">
-        <option value="all">Lifetime</option>
-    </select>
+    <span>View Event:</span>
+    <select id="globalEventFilter" onchange="updateUI()" style="padding:4px; font-size:12px; width:auto;"></select>
 </div>
 
 <div class="container">
     <div id="tab-play" class="tab-content active">
         <div class="card">
-            <h3>Match Entry</h3>
+            <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Suggest</button></h3>
             <div id="selectionGrid"></div>
             <div style="display: flex; gap: 5px; margin-top:10px;">
                 <input type="number" id="s1" placeholder="T1" style="flex:1;" inputmode="numeric">
                 <input type="number" id="s2" placeholder="T2" style="flex:1;" inputmode="numeric">
             </div>
             <p id="lockMessage" style="font-size:11px; text-align:center; margin:10px 0;"></p>
-            <button id="submitBtn" class="btn-blue" onclick="recordMatch()">Submit Result</button>
+            <button id="submitBtn" class="btn-blue" onclick="recordMatch()">Submit Match</button>
+        </div>
+    </div>
+
+    <div id="tab-roster" class="tab-content">
+        <div class="card">
+            <h3>Attendance <button class="btn-outline" onclick="resetAttendance()">Reset All</button></h3>
+            <div id="attendanceList"></div>
         </div>
     </div>
 
     <div id="tab-rank" class="tab-content">
         <div class="card">
-            <h3>🏆 Leaderboard</h3>
+            <h3>🏆 Individual Leaderboard</h3>
             <table>
                 <thead><tr><th>#</th><th style="text-align:left">Player</th><th>G</th><th>W-L</th><th>PPG</th></tr></thead>
                 <tbody id="leaderboardBody"></tbody>
@@ -75,26 +81,37 @@
         </div>
     </div>
 
+    <div id="tab-pairs" class="tab-content">
+        <div class="card">
+            <h3>👥 Pair Dominance</h3>
+            <table>
+                <thead><tr><th>#</th><th style="text-align:left">Pair</th><th>G</th><th>W-L</th><th>%</th></tr></thead>
+                <tbody id="pairsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="tab-hist" class="tab-content">
+        <div class="card">
+            <h3>🕒 Match History</h3>
+            <div id="historyList"></div>
+        </div>
+    </div>
+
     <div id="tab-admin" class="tab-content">
         <div class="card">
-            <h3>Create New Event</h3>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="newEventName" placeholder="e.g. March 2026" style="flex:1;">
+            <h3>Events <small>(One Active at a time)</small></h3>
+            <div id="eventAdminList"></div>
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <input type="text" id="newEventName" placeholder="Event Name" style="flex:1;">
                 <button style="width:60px;" onclick="addEvent()">Add</button>
             </div>
         </div>
-
-        <div class="card">
-            <h3>Active Event Status</h3>
-            <div id="eventAdminList"></div>
-            <p style="font-size:10px; color:#666; margin-top:10px;">* Only <b>one</b> event can be Active at a time.</p>
-        </div>
-
         <div class="card">
             <h3>Player Admin</h3>
             <div id="adminPlayerList"></div>
             <div style="display:flex; gap:5px; margin-top:10px;">
-                <input type="text" id="newName" placeholder="Player Name" style="flex:1;">
+                <input type="text" id="newName" placeholder="New Player" style="flex:1;">
                 <button style="width:60px;" onclick="addPlayer()">Add</button>
             </div>
         </div>
@@ -103,7 +120,10 @@
 
 <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('play', this)">🎮 Play</button>
+    <button class="tab-btn" onclick="switchTab('roster', this)">📍 Roster</button>
     <button class="tab-btn" onclick="switchTab('rank', this)">🏆 Rank</button>
+    <button class="tab-btn" onclick="switchTab('pairs', this)">👥 Pairs</button>
+    <button class="tab-btn" onclick="switchTab('hist', this)">🕒 Hist</button>
     <button class="tab-btn" onclick="switchTab('admin', this)">⚙️ Admin</button>
 </div>
 
@@ -119,11 +139,11 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const cloudDoc = db.collection('badmintonTracker').doc('sessionControlData');
+    const cloudDoc = db.collection('badmintonTracker').doc('masterDataV1');
 
     let players = [];
     let history = [];
-    let events = [{id: 'reg', name: 'Regular', active: true}];
+    let events = [{id: 'default', name: 'Standard Session', active: true}];
     let selections = {};
 
     cloudDoc.onSnapshot(doc => {
@@ -131,7 +151,7 @@
             const d = doc.data();
             players = d.players || [];
             history = d.history || [];
-            events = d.events || [{id: 'reg', name: 'Regular', active: true}];
+            events = d.events || events;
             updateUI();
         }
     });
@@ -145,34 +165,36 @@
         btn.classList.add('active');
     }
 
-    function addEvent() {
-        const name = document.getElementById('newEventName').value.trim();
-        if(!name) return;
-        // Deactivate others
-        events.forEach(e => e.active = false);
-        events.push({ id: 'ev_' + Date.now(), name, active: true });
-        document.getElementById('newEventName').value = '';
-        save();
-    }
-
-    function toggleEventStatus(id) {
-        const event = events.find(e => e.id === id);
-        if(event.active) {
-            event.active = false; // Close it
-        } else {
-            events.forEach(e => e.active = false); // Deactivate all
-            event.active = true; // Activate this one
-        }
-        save();
-    }
-
     function addPlayer() {
-        const name = document.getElementById('newName').value.trim();
-        if(name && !players.find(p => p.name === name)) {
-            players.push({ name, skill: 5 });
-            document.getElementById('newName').value = '';
-            save();
+        const n = document.getElementById('newName').value.trim();
+        if(n && !players.find(p => p.name === n)) {
+            players.push({ name: n, skill: 5, present: false, lastPlayed: 0 });
+            document.getElementById('newName').value = ''; save();
         }
+    }
+
+    function deletePlayer(name) {
+        if(confirm(`Wipe ${name} from system?`)) { players = players.filter(p => p.name !== name); save(); }
+    }
+
+    function addEvent() {
+        const n = document.getElementById('newEventName').value.trim();
+        if(!n) return;
+        events.forEach(e => e.active = false);
+        events.push({ id: 'ev_'+Date.now(), name: n, active: true });
+        document.getElementById('newEventName').value = ''; save();
+    }
+
+    function toggleEvent(id) {
+        const ev = events.find(e => e.id === id);
+        if(ev.active) ev.active = false;
+        else { events.forEach(e => e.active = false); ev.active = true; }
+        save();
+    }
+
+    function togglePresence(name) {
+        const p = players.find(x => x.name === name);
+        if(p) { p.present = !p.present; save(); }
     }
 
     function selectTeam(name, team) {
@@ -184,86 +206,83 @@
         updateUI();
     }
 
+    function suggestTeams() {
+        const pool = players.filter(p => p.present).sort((a,b) => a.lastPlayed - b.lastPlayed).slice(0,4);
+        if(pool.length < 4) return alert("Need 4 present players!");
+        pool.sort((a,b) => a.skill - b.skill);
+        selections = {};
+        selections[pool[0].name] = 1; selections[pool[3].name] = 1; // Best + Worst
+        selections[pool[1].name] = 2; selections[pool[2].name] = 2; // Mid
+        updateUI();
+    }
+
     function recordMatch() {
-        const activeEvent = events.find(e => e.active);
-        if(!activeEvent) return alert("No Active event! Open one in Admin.");
-        
+        const ev = events.find(e => e.active);
         const t1 = Object.keys(selections).filter(n => selections[n] === 1);
         const t2 = Object.keys(selections).filter(n => selections[n] === 2);
         const s1 = parseInt(document.getElementById('s1').value);
         const s2 = parseInt(document.getElementById('s2').value);
-
-        if(t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Check selection & score!");
-
-        history.push({ t1, t2, s1, s2, eventId: activeEvent.id, time: Date.now() });
-        selections = {};
-        document.getElementById('s1').value = '';
-        document.getElementById('s2').value = '';
+        if(t1.length < 2 || t2.length < 2 || isNaN(s1) || isNaN(s2)) return alert("Data missing!");
+        const now = Date.now();
+        history.push({ t1, t2, s1, s2, eventId: ev.id, time: now });
+        [...t1, ...t2].forEach(n => { let p = players.find(x => x.name === n); if(p) p.lastPlayed = now; });
+        selections = {}; document.getElementById('s1').value = ''; document.getElementById('s2').value = '';
         save();
     }
 
     function updateUI() {
-        const filterId = document.getElementById('globalEventFilter').value;
-        const activeEvent = events.find(e => e.active);
-        const filterSelect = document.getElementById('globalEventFilter');
+        const filterId = document.getElementById('globalEventFilter').value || 'all';
+        const activeEv = events.find(e => e.active);
         
-        // Update Selector
-        const currentVal = filterSelect.value;
-        filterSelect.innerHTML = '<option value="all">Lifetime</option>';
-        events.forEach(e => {
-            filterSelect.innerHTML += `<option value="${e.id}" ${currentVal==e.id?'selected':''}>${e.name} ${e.active?'(Active)':''}</option>`;
-        });
+        // Filter Dropdown
+        const fs = document.getElementById('globalEventFilter');
+        const cur = fs.value;
+        fs.innerHTML = '<option value="all">Lifetime History</option>';
+        events.forEach(e => fs.innerHTML += `<option value="${e.id}" ${cur==e.id?'selected':''}>${e.name} ${e.active?'(Active)':''}</option>`);
 
-        // Lock Play Tab if no active event
-        const submitBtn = document.getElementById('submitBtn');
-        const lockMsg = document.getElementById('lockMessage');
-        if(!activeEvent) {
-            submitBtn.disabled = true;
-            lockMsg.innerHTML = "⚠️ <b style='color:var(--fb-red)'>ALL EVENTS CLOSED.</b><br>Open an event in Admin to play.";
-        } else {
-            submitBtn.disabled = false;
-            lockMsg.innerHTML = `Recording to: <b style="color:var(--fb-green)">${activeEvent.name}</b>`;
-        }
+        // Lock State
+        const btn = document.getElementById('submitBtn');
+        const msg = document.getElementById('lockMessage');
+        if(!activeEv) { btn.disabled = true; msg.innerHTML = "⚠️ <b style='color:red'>ALL EVENTS CLOSED.</b>"; }
+        else { btn.disabled = false; msg.innerHTML = `Saving to: <b>${activeEv.name}</b>`; }
 
-        // Leaderboard Logic
-        const filteredHistory = filterId === 'all' ? history : history.filter(m => m.eventId === filterId);
-        let stats = {};
-        players.forEach(p => stats[p.name] = { g:0, w:0, l:0, pts:0 });
-        filteredHistory.forEach(m => {
+        // Filtered History
+        const fHist = filterId === 'all' ? history : history.filter(m => m.eventId === filterId);
+
+        // Leaderboard Calculation
+        let st = {}; players.forEach(p => st[p.name] = {g:0, w:0, l:0, pts:0});
+        fHist.forEach(m => {
             const win1 = m.s1 > m.s2;
             [...m.t1, ...m.t2].forEach(name => {
-                if(!stats[name]) return;
-                stats[name].g++;
+                if(!st[name]) return; st[name].g++;
                 const isT1 = m.t1.includes(name);
                 const won = (isT1 && win1) || (!isT1 && !win1);
-                if(won) { stats[name].w++; stats[name].pts += (isT1?m.s1:m.s2) + 3; }
-                else { stats[name].l++; stats[name].pts += (isT1?m.s1:m.s2); }
+                if(won) { st[name].w++; st[name].pts += (isT1?m.s1:m.s2) + 3; }
+                else { st[name].l++; st[name].pts += (isT1?m.s1:m.s2); }
             });
         });
 
-        const sorted = Object.keys(stats).map(name => ({ name, ...stats[name] })).filter(p => p.g > 0).sort((a,b) => (b.pts/b.g) - (a.pts/a.g));
-        document.getElementById('leaderboardBody').innerHTML = sorted.map((p, i) => `
-            <tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.w}W-${p.l}L</td><td><b>${(p.pts/p.g).toFixed(1)}</b></td></tr>
-        `).join('');
+        const sorted = Object.keys(st).map(n => ({name:n, ...st[n]})).filter(p => p.g > 0).sort((a,b) => (b.pts/b.g) - (a.pts/a.g));
+        document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.w}W-${p.l}L</td><td><b>${(p.pts/p.g).toFixed(1)}</b></td></tr>`).join('');
 
-        // Event Admin List
-        document.getElementById('eventAdminList').innerHTML = events.map(e => `
-            <div class="event-item">
-                <span>${e.name} <span class="status-badge ${e.active?'status-active':'status-closed'}">${e.active?'ACTIVE':'CLOSED'}</span></span>
-                <button class="btn-outline" onclick="toggleEventStatus('${e.id}')">${e.active?'Close':'Open'}</button>
-            </div>
-        `).join('');
+        // Pairs Calculation
+        let ps = {};
+        fHist.forEach(m => {
+            [{t:m.t1, s:m.s1, o:m.s2}, {t:m.t2, s:m.s2, o:m.s1}].forEach(x => {
+                const k = x.t.sort().join(" & ");
+                if(!ps[k]) ps[k] = {g:0, w:0, l:0};
+                ps[k].g++; if(x.s > x.o) ps[k].w++; else ps[k].l++;
+            });
+        });
+        const sPairs = Object.keys(ps).map(k => ({n:k, ...ps[k]})).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
+        document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}W-${p.l}L</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
 
-        // Selection Grid
-        document.getElementById('selectionGrid').innerHTML = players.map(p => `
-            <div class="player-row" style="background:${selections[p.name]==1?'#e7f3ff':selections[p.name]==2?'#ffeef0':'#fff'}">
-                <span>${p.name}</span>
-                <div>
-                    <button class="btn-outline" onclick="selectTeam('${p.name}', 1)">T1</button>
-                    <button class="btn-outline" onclick="selectTeam('${p.name}', 2)">T2</button>
-                </div>
-            </div>
-        `).join('');
+        // Grid & Roster UI
+        document.getElementById('selectionGrid').innerHTML = players.filter(p => p.present).map(p => `<div class="player-row" style="background:${selections[p.name]==1?'#e7f3ff':selections[p.name]==2?'#ffeef0':'#fff'}"><span>${p.name} <span class="badge">S${p.skill}</span></span><div><button class="btn-outline" onclick="selectTeam('${p.name}', 1)">T1</button> <button class="btn-outline" onclick="selectTeam('${p.name}', 2)">T2</button></div></div>`).join('');
+        document.getElementById('attendanceList').innerHTML = players.map(p => `<div class="player-row"><label>${p.name}</label><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"></div>`).join('');
+        document.getElementById('eventAdminList').innerHTML = events.map(e => `<div class="player-row"><span>${e.name} <small>(${e.active?'Active':'Closed'})</small></span><button class="btn-outline" onclick="toggleEvent('${e.id}')">${e.active?'Close':'Open'}</button></div>`).join('');
+        document.getElementById('adminPlayerList').innerHTML = players.map(p => `<div class="player-row"><span>${p.name}</span><button class="btn-outline" style="color:red" onclick="deletePlayer('${p.name}')">🗑️</button></div>`).join('');
+        document.getElementById('historyList').innerHTML = [...fHist].reverse().map(m => `<div class="history-item"><span class="event-tag">${events.find(e => e.id===m.eventId)?.name}</span> <b>${m.s1}-${m.s2}</b>: ${m.t1.join(",")} vs ${m.t2.join(",")}</div>`).join('');
     }
 </script>
 </body>
