@@ -16,28 +16,27 @@
         .card { background: white; padding: 10px; margin-bottom: 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         h3 { margin: 0 0 8px 0; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
         
+        /* Last Game Info Box */
+        .last-game-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 8px; border-radius: 8px; margin-bottom: 10px; text-align: center; font-size: 11px; color: #856404; }
+        
         input, select, button { padding: 8px; margin: 4px 0; border-radius: 8px; border: 1px solid #ccd0d5; font-size: 13px; box-sizing: border-box; }
         button { background: var(--fb-green); color: white; border: none; font-weight: bold; cursor: pointer; width: 100%; }
         .btn-blue { background: var(--fb-blue); }
         .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 10px; width: auto; padding: 4px 8px; }
         
         .selection-grid { display: grid; grid-template-columns: 1fr 50px 50px; gap: 5px; align-items: center; margin-bottom: 5px; }
-        .player-name-cell { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #eee; font-size: 12px; display: flex; align-items: center; }
+        .player-name-cell { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #eee; font-size: 13px; display: flex; align-items: center; }
         .t-btn { height: 35px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #666; font-weight: bold; }
         .t1-active .t-btn-1 { background: var(--fb-blue); color: #fff; border-color: var(--fb-blue); }
         .t2-active .t-btn-2 { background: var(--fb-red); color: #fff; border-color: var(--fb-red); }
         .t1-active .player-name-cell { background: #e7f3ff; border-color: var(--fb-blue); }
         .t2-active .player-name-cell { background: #ffeef0; border-color: var(--fb-red); }
 
-        .badge, .badge-placeholder { display: inline-block; width: 18px; height: 18px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; }
+        .badge, .badge-placeholder { display: inline-block; width: 18px; height: 18px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
         .badge { color: white; font-size: 10px; text-align: center; line-height: 18px; font-weight: bold; }
         .badge-1 { background: var(--fb-gold); color: #000; } .badge-2 { background: #c0c0c0; color: #000; } .badge-3 { background: #cd7f32; }
-        
-        .res-tag { font-size: 9px; padding: 2px 5px; border-radius: 4px; margin-left: auto; font-weight: bold; white-space: nowrap; }
-        .res-w { background: #e6f4ea; color: var(--fb-green); } .res-l { background: #fce8e6; color: var(--fb-red); }
 
         .single-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: #fff; border-radius: 10px; margin-bottom: 5px; border: 1px solid #eee; }
-        
         table { width: 100%; border-collapse: collapse; font-size: 10px; text-align: center; }
         th, td { padding: 8px 2px; border-bottom: 1px solid #eee; }
 
@@ -54,6 +53,7 @@
 
 <div class="container">
     <div id="tab-play" class="tab-content active">
+        <div id="lastGameAlert" class="last-game-box" style="display:none;"></div>
         <div class="card">
             <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
             <div id="selectionListContainer"></div>
@@ -62,8 +62,7 @@
                 <div style="padding-top:20px;">VS</div>
                 <div style="flex:1; text-align:center;"><small style="color:var(--fb-red)">T2 SCORE</small><input type="number" id="s2" style="text-align:center;"></div>
             </div>
-            <p id="eventLabel" style="font-size:10px; text-align:center; margin:5px 0; color:#888;"></p>
-            <button class="btn-blue" id="submitBtn" onclick="recordMatch()">Submit Match Result</button>
+            <button class="btn-blue" style="margin-top:10px;" onclick="recordMatch()">Submit Match Result</button>
         </div>
     </div>
 
@@ -88,7 +87,7 @@
 
     <div id="tab-pairs" class="tab-content">
         <div class="card">
-            <h3>👥 Dominant Pairs</h3>
+            <h3>👥 Pair Dominance</h3>
             <table>
                 <thead><tr><th>#</th><th style="text-align:left">Pair</th><th>G</th><th>W-L</th><th>%</th></tr></thead>
                 <tbody id="pairsBody"></tbody>
@@ -124,11 +123,11 @@
             <button onclick="updateSettings()" style="margin-top:8px; background:var(--fb-blue);">Save Rules</button>
         </div>
         <div class="card">
-            <h3>Events / Tournaments</h3>
+            <h3>Tournaments</h3>
             <div id="eventAdminList"></div>
-            <div style="display:flex; gap:5px; margin-top:5px;">
-                <input type="text" id="newEventName" placeholder="Event Name">
-                <button style="width:60px;" onclick="addEvent()">Create</button>
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <input type="text" id="newEventName" placeholder="New Event">
+                <button style="width:65px;" onclick="addEvent()">Create</button>
             </div>
         </div>
     </div>
@@ -180,74 +179,76 @@
     function auth(pwd) { const e = prompt("Password:"); return e === pwd; }
 
     function updateUI() {
+        // Handle Event Filter
         const ef = document.getElementById('rankEventFilter');
         const cur = ef.value;
         ef.innerHTML = '<option value="all">Lifetime</option>';
         events.forEach(e => ef.innerHTML += `<option value="${e.id}" ${cur==e.id?'selected':''}>${e.name}</option>`);
 
-        const activeEv = events.find(e => e.active);
-        document.getElementById('eventLabel').innerText = activeEv ? `Session: ${activeEv.name}` : 'No Active Event';
-        document.getElementById('submitBtn').disabled = !activeEv;
-
-        // Score Calc (Losers = 0)
-        let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0, lastTxt:''});
+        // Rankings Logic
+        let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0});
         history.forEach(m => {
             const diff = Math.abs(m.s1 - m.s2);
             [...m.t1, ...m.t2].forEach(n => {
                 if(!st[n]) return; st[n].g++;
                 const isT1 = m.t1.includes(n);
                 const won = (isT1 && m.s1 > m.s2) || (!isT1 && m.s2 > m.s1);
-                const myS = isT1 ? m.s1 : m.s2; const opS = isT1 ? m.s2 : m.s1;
-                st[n].lastTxt = won ? `W ${myS}-${opS}` : `L ${myS}-${opS}`;
                 if(won) { st[n].pts += config.winBonus + (diff * config.marginMult); }
             });
         });
 
-        const sorted = Object.keys(st).map(n => ({name:n, ...st[n]}))
-            .sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
+        // Top 3 Badges
+        const sorted = Object.keys(st).map(n => ({name:n, ...st[n]})).sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
         const top3Names = sorted.filter(x => x.pts > 0).slice(0,3).map(x => x.name);
 
-        // PLAY TAB
+        // Last Game Box logic
+        const alertBox = document.getElementById('lastGameAlert');
+        if(history.length > 0) {
+            const m = history[history.length - 1];
+            const w1 = m.s1 >= m.s2;
+            alertBox.style.display = 'block';
+            alertBox.innerHTML = `🏁 <b>Last Result:</b> ${w1 ? m.s1 : m.s2}-${w1 ? m.s2 : m.s1} <br> ${w1 ? m.t1.join("/") : m.t2.join("/")} beat ${w1 ? m.t2.join("/") : m.t1.join("/")}`;
+        }
+
+        // PLAY TAB - Sort by Rank PPG
         document.getElementById('selectionListContainer').innerHTML = players
             .filter(p => p.present)
             .sort((a, b) => sorted.findIndex(x => x.name === a.name) - sorted.findIndex(x => x.name === b.name))
             .map(p => {
                 const r = top3Names.indexOf(p.name) + 1;
-                const last = st[p.name].lastTxt;
                 const bHtml = r > 0 ? `<span class="badge badge-${r}">${r}</span>` : `<span class="badge-placeholder"></span>`;
                 const t = selections[p.name];
                 return `<div class="selection-grid ${t==1?'t1-active':t==2?'t2-active':''}">
-                    <div class="player-name-cell">${bHtml} <b>${p.name}</b> ${last?`<span class="res-tag res-${last[0].toLowerCase()}">${last}</span>`:''}</div>
+                    <div class="player-name-cell">${bHtml} <b>${p.name}</b> <span style="font-size:9px; color:#999; margin-left:auto;">S${p.skill}</span></div>
                     <button class="t-btn" onclick="selectTeam('${p.name}', 1)">T1</button>
                     <button class="t-btn" onclick="selectTeam('${p.name}', 2)">T2</button>
                 </div>`;
             }).join('');
 
-        // ROSTER
+        // ROSTER TAB
         document.getElementById('rosterList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `
             <div class="single-row">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"><b>${p.name}</b>
+                    <input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b>
                 </div>
                 <div style="display:flex; align-items:center; gap:5px;">
                     <input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px; margin:0;">
-                    <button class="btn-outline" style="color:red;" onclick="deletePlayer('${p.name}')">🗑️</button>
+                    <button class="btn-outline" style="color:red; border-color:red;" onclick="deletePlayer('${p.name}')">🗑️</button>
                 </div>
             </div>`).join('');
 
-        // RANK
+        // RANKINGS
         document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `
             <tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>
         `).join('');
 
-        // HISTORY (Winners First + Single Row)
+        // HISTORY
         const filterId = document.getElementById('rankEventFilter').value || 'all';
-        const fHist = (filterId === 'all' ? history : history.filter(m => m.eventId === filterId)).slice(-50);
+        const fHist = filterId === 'all' ? history : history.filter(m => m.eventId === filterId);
         document.getElementById('historyList').innerHTML = [...fHist].reverse().map(m => {
             const w1 = m.s1 >= m.s2;
-            const res = w1 ? `<b>${m.s1}</b>-${m.s2}` : `<b>${m.s2}</b>-${m.s1}`;
-            return `<div class="history-item">
-                <div style="flex-grow:1">${res} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small></div>
+            return `<div class="single-row" style="font-size:11px;">
+                <div style="flex-grow:1"><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} (${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</div>
                 <div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button><button class="btn-outline" style="color:red" onclick="deleteMatch(${m.id})">X</button></div>
             </div>`;
         }).join('');
@@ -258,21 +259,9 @@
                 <span>${e.name} <small>(${e.active?'Active':'Closed'})</small></span>
                 <button class="btn-outline" onclick="toggleEvent('${e.id}')">${e.active?'Close':'Open'}</button>
             </div>`).join('');
-            
-        // PAIRS
-        let ps = {};
-        history.forEach(m => {
-            [{t:m.t1, s:m.s1, o:m.s2}, {t:m.t2, s:m.s2, o:m.s1}].forEach(x => {
-                const k = x.t.sort().join(" & ");
-                if(!ps[k]) ps[k] = {g:0, w:0, l:0};
-                ps[k].g++; if(x.s > x.o) ps[k].w++; else ps[k].l++;
-            });
-        });
-        const sPairs = Object.keys(ps).map(k => ({n:k, ...ps[k]})).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
-        document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
     }
 
-    // HANDLERS
+    // Handlers
     function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-'+id).classList.add('active'); btn.classList.add('active'); }
     function addPlayer() { const n = document.getElementById('newName'); const s = document.getElementById('newSkill'); if(n.value.trim()){ players.push({ name: n.value.trim(), skill: parseInt(s.value), present: false }); n.value=''; s.value='5'; save(); }}
     function selectTeam(name, team) { if(selections[name] === team) delete selections[name]; else { if(Object.values(selections).filter(v => v === team).length >= 2) return; selections[name] = team; } updateUI(); }
@@ -282,8 +271,8 @@
         const t2 = Object.keys(selections).filter(n => selections[n] === 2); 
         const s1 = parseInt(document.getElementById('s1').value); 
         const s2 = parseInt(document.getElementById('s2').value); 
-        if(!t1.length || isNaN(s1)) return; 
-        history.push({ t1, t2, s1, s2, eventId: ev.id, time: Date.now(), id: Date.now() }); 
+        if(!t1.length || isNaN(s1)) return alert("Select teams and enter scores!"); 
+        history.push({ t1, t2, s1, s2, eventId: ev?ev.id:'def', time: Date.now(), id: Date.now() }); 
         selections = {}; document.getElementById('s1').value=''; document.getElementById('s2').value=''; 
         save(); 
     }
