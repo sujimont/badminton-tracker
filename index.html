@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fit Boys Badminton League</title>
+    <title>Fit Boys Pro Master</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
@@ -16,19 +16,19 @@
         .card { background: white; padding: 10px; margin-bottom: 6px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         h3 { margin: 0 0 6px 0; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 3px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Compact Team Display */
-        .team-display { font-size: 10px; font-weight: bold; height: 28px; display: flex; align-items: flex-end; justify-content: center; text-align: center; line-height: 1; margin-bottom: 2px; }
+        .last-game-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 8px; border-radius: 8px; margin-bottom: 8px; text-align: center; font-size: 11px; color: #856404; font-weight: bold; line-height: 1.4; }
+        .team-display { font-size: 10px; font-weight: bold; height: 26px; display: flex; align-items: flex-end; justify-content: center; text-align: center; line-height: 1; margin-bottom: 2px; }
         .color-t1 { color: var(--fb-blue); } .color-t2 { color: var(--fb-red); }
 
         input, select, button { padding: 8px; margin: 2px 0; border-radius: 8px; border: 1px solid #ccd0d5; font-size: 14px; box-sizing: border-box; }
         button { background: var(--fb-green); color: white; border: none; font-weight: bold; cursor: pointer; }
         .btn-blue { background: var(--fb-blue); width: 100%; }
-        .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 10px; padding: 3px 6px; width: auto; }
+        .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 10px; padding: 4px 8px; width: auto; }
+        .btn-outline.active { background: var(--fb-blue); color: white; border-color: var(--fb-blue); }
         
-        /* Shaded Labels T1/T2 */
         .selection-grid { display: grid; grid-template-columns: 1fr 48px 48px; gap: 3px; align-items: center; margin-bottom: 3px; }
-        .player-name-cell { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #eee; font-size: 13px; display: flex; align-items: center; height: 36px; box-sizing: border-box;}
-        .t-btn { height: 36px; border: 1px solid #eee; border-radius: 8px; background: #fff; font-weight: bold; color: #ccc; font-size: 11px; }
+        .player-name-cell { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #eee; font-size: 13px; display: flex; align-items: center; height: 36px; overflow: hidden; }
+        .t-btn { height: 36px; border: 1px solid #eee; border-radius: 8px; background: #fff; font-weight: bold; color: #ccc; font-size: 10px; }
         .t1-active .t-btn-1 { background: var(--fb-blue); color: #fff; border-color: var(--fb-blue); }
         .t2-active .t-btn-2 { background: var(--fb-red); color: #fff; border-color: var(--fb-red); }
         .t1-active .player-name-cell { background: #e7f3ff; border-color: var(--fb-blue); }
@@ -47,14 +47,16 @@
         .tab-btn.active { color: var(--fb-blue); border-top: 3px solid var(--fb-blue); font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+        .hist-date { display: block; font-size: 8px; color: #999; margin-top: 2px; }
     </style>
 </head>
 <body>
 
-<div class="header">🏸 Fit Boys Badminton League</div>
+<div class="header">🏸 Fit Boys Pro Master</div>
 
 <div class="container">
     <div id="tab-play" class="tab-content active">
+        <div id="lastGameAlert" class="last-game-box" style="display:none;"></div>
         <div class="card" style="padding:6px;">
             <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
             <div id="selectionListContainer"></div>
@@ -70,8 +72,8 @@
     <div id="tab-matrix" class="tab-content">
         <div class="card">
             <div style="display:flex; gap:5px; margin-bottom:8px;">
-                <button class="btn-outline" style="flex:1" onclick="setMatrixMode('partner')">Partners</button>
-                <button class="btn-outline" style="flex:1" onclick="setMatrixMode('opponent')">Opponents</button>
+                <button id="mPartnerBtn" class="btn-outline active" style="flex:1" onclick="setMatrixMode('partner')">Partners</button>
+                <button id="mOpponentBtn" class="btn-outline" style="flex:1" onclick="setMatrixMode('opponent')">Opponents</button>
             </div>
             <div style="overflow-x:auto;"><table id="matrixTable"></table></div>
         </div>
@@ -171,21 +173,46 @@
         if(doc.exists) {
             const d = doc.data();
             players = d.players || []; history = d.history || []; events = d.events || events;
-            if(d.config) config = d.config;
+            if(d.config) {
+                config = d.config;
+                document.getElementById('winBonus').value = config.winBonus;
+                document.getElementById('marginMult').value = config.marginMult;
+                document.getElementById('loseDeduct').value = config.loseDeduct;
+            }
             updateUI();
         }
     });
 
     function save() { cloudDoc.set({ players, history, events, config }); }
     function auth(pwd) { return prompt("Password:") === pwd; }
-    function setMatrixMode(m) { matrixMode = m; updateUI(); }
-    function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-'+id).classList.add('active'); btn.classList.add('active'); }
+    
+    function setMatrixMode(m) { 
+        matrixMode = m; 
+        document.getElementById('mPartnerBtn').classList.toggle('active', m==='partner');
+        document.getElementById('mOpponentBtn').classList.toggle('active', m==='opponent');
+        updateUI(); 
+    }
+
+    function switchTab(id, btn) { 
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); 
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
+        document.getElementById('tab-'+id).classList.add('active'); 
+        btn.classList.add('active'); 
+    }
 
     function updateUI() {
         const ef = document.getElementById('rankEventFilter');
         const cur = ef.value;
-        ef.innerHTML = '<option value="all">Lifetime</option>';
+        ef.innerHTML = '<option value="all">Lifetime History</option>';
         events.forEach(e => ef.innerHTML += `<option value="${e.id}" ${cur==e.id?'selected':''}>${e.name}</option>`);
+
+        const alertBox = document.getElementById('lastGameAlert');
+        if(history.length > 0) {
+            const lastMatch = history[history.length - 1];
+            const w1 = lastMatch.s1 >= lastMatch.s2;
+            alertBox.style.display = 'block';
+            alertBox.innerHTML = `🏁 <b>Last Result:</b> ${w1?lastMatch.s1:lastMatch.s2}-${w1?lastMatch.s2:lastMatch.s1} <br> ${w1?lastMatch.t1.join("/"):lastMatch.t2.join("/")} beat ${w1?lastMatch.t2.join("/"):lastMatch.t1.join("/")}`;
+        } else { alertBox.style.display = 'none'; }
 
         let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0, w:0, l:0});
         history.forEach(m => {
@@ -216,7 +243,7 @@
         document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
         document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
 
-        // Matrix
+        // Matrix Rendering
         let mData = {}; players.forEach(p1 => { mData[p1.name] = {}; players.forEach(p2 => mData[p1.name][p2.name] = 0); });
         history.forEach(m => {
             if(matrixMode === 'partner') { [m.t1, m.t2].forEach(team => { if(team.length===2) { mData[team[0]][team[1]]++; mData[team[1]][team[0]]++; } }); }
@@ -234,19 +261,23 @@
         const sPairs = Object.keys(ps).map(k => ({n:k, ...ps[k]})).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
         document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
         document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`).join('');
-
         document.getElementById('eventAdminList').innerHTML = events.map(e => `<div class="single-row"><span>${e.name} <small>(${e.active?'Active':'Closed'})</small></span><button class="btn-outline" onclick="toggleEvent('${e.id}')">${e.active?'Close':'Open'}</button></div>`).join('');
         document.getElementById('rosterList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="single-row"><span><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b></span><div><input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px;"><button class="btn-outline" onclick="deletePlayer('${p.name}')">🗑️</button></div></div>`).join('');
         
-        document.getElementById('historyList').innerHTML = [...history].reverse().map(m => { const w1 = m.s1 >= m.s2; return `<div class="single-row"><div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small></div><div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button><button class="btn-outline" style="color:red" onclick="deleteMatch(${m.id})">X</button></div></div>`; }).join('');
+        // History List with Date
+        document.getElementById('historyList').innerHTML = [...history].reverse().map(m => { 
+            const w1 = m.s1 >= m.s2; 
+            const d = m.time ? new Date(m.time).toLocaleString([], {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+            return `<div class="single-row"><div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small><span class="hist-date">${d}</span></div><div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button><button class="btn-outline" style="color:red" onclick="deleteMatch(${m.id})">X</button></div></div>`; 
+        }).join('');
     }
 
     function clearTournamentRecords() {
-        const ev = events.find(e => e.active);
-        if(!ev) return alert("Select an active event first.");
+        const activeEv = events.find(e => e.active);
+        if(!activeEv) return alert("Select an active event in Admin.");
         if(auth(SUPER_PWD)) {
-            if(confirm(`Wipe all matches for "${ev.name}" and reset player queue?`)) {
-                history = history.filter(m => m.eventId !== ev.id);
+            if(confirm(`⚠️ Reset "${activeEv.name}"? matches and queue will be wiped.`)) {
+                history = history.filter(m => m.eventId !== activeEv.id);
                 players.forEach(p => p.lastPlayed = 0);
                 save();
             }
@@ -258,8 +289,20 @@
     function togglePresence(n) { players.find(x=>x.name===n).present = !players.find(x=>x.name===n).present; save(); }
     function addEvent() { if(!auth(ADMIN_PWD)) return; const n = document.getElementById('newEventName').value.trim(); if(n) { events.forEach(e => e.active = false); events.push({id:'ev_'+Date.now(), name:n, active:true}); save(); } }
     function toggleEvent(id) { if(!auth(ADMIN_PWD)) return; const ev = events.find(e => e.id === id); ev.active = !ev.active; save(); }
-    function recordMatch() { const t1 = Object.keys(selections).filter(n => selections[n] === 1); const t2 = Object.keys(selections).filter(n => selections[n] === 2); const s1 = parseInt(document.getElementById('s1').value); const s2 = parseInt(document.getElementById('s2').value); if(t1.length < 2 || isNaN(s1)) return alert("Missing data!"); const now = Date.now(); history.push({ t1, t2, s1, s2, id: now, time: now, eventId: events.find(e=>e.active)?.id || 'def' }); [...t1, ...t2].forEach(n => players.find(x=>x.name===n).lastPlayed = now); selections = {}; document.getElementById('s1').value=''; document.getElementById('s2').value=''; save(); }
-    function updateSettings() { if(!auth(ADMIN_PWD)) return; config.winBonus = parseFloat(document.getElementById('winBonus').value); config.marginMult = parseFloat(document.getElementById('marginMult').value); config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value); save(); alert("Saved"); }
+    function recordMatch() { 
+        const activeEv = events.find(e => e.active);
+        const t1 = Object.keys(selections).filter(n => selections[n] === 1); 
+        const t2 = Object.keys(selections).filter(n => selections[n] === 2); 
+        const s1 = parseInt(document.getElementById('s1').value); 
+        const s2 = parseInt(document.getElementById('s2').value); 
+        if(t1.length < 2 || isNaN(s1)) return alert("Missing data!"); 
+        const now = Date.now();
+        history.push({ t1, t2, s1, s2, id: now, time: now, eventId: activeEv ? activeEv.id : 'def' }); 
+        [...t1, ...t2].forEach(n => players.find(x=>x.name===n).lastPlayed = now);
+        selections = {}; document.getElementById('s1').value=''; document.getElementById('s2').value=''; 
+        save(); 
+    }
+    function updateSettings() { if(!auth(ADMIN_PWD)) return; config.winBonus = parseFloat(document.getElementById('winBonus').value); config.marginMult = parseFloat(document.getElementById('marginMult').value); config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value); save(); }
     function deletePlayer(n) { if(confirm("Delete?")) { players=players.filter(x=>x.name!==n); save(); } }
     function updateSkill(n,v) { players.find(x=>x.name===n).skill = parseInt(v); save(); }
     function deleteMatch(id) { if(auth(SUPER_PWD)) { history = history.filter(m => m.id !== id); save(); } }
