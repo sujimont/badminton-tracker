@@ -14,37 +14,32 @@
         .header { background: var(--fb-blue); color: white; padding: 12px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 1000; }
         .container { padding: 5px; max-width: 600px; margin: auto; }
         .card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h3 { margin: 0 0 8px 0; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Play Screen: Team Review Text */
-        .team-display { font-size: 11px; font-weight: bold; height: 34px; overflow: hidden; display: flex; align-items: flex-end; justify-content: center; text-align: center; padding: 2px; line-height: 1.1; }
+        .team-display { font-size: 11px; font-weight: bold; height: 34px; display: flex; align-items: flex-end; justify-content: center; text-align: center; line-height: 1.1; }
         .color-t1 { color: var(--fb-blue); } .color-t2 { color: var(--fb-red); }
 
-        /* Inputs & Buttons */
         input, select, button { padding: 10px; margin: 4px 0; border-radius: 8px; border: 1px solid #ccd0d5; font-size: 15px; box-sizing: border-box; }
         button { background: var(--fb-green); color: white; border: none; font-weight: bold; cursor: pointer; }
         .btn-blue { background: var(--fb-blue); width: 100%; }
-        .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 12px; padding: 5px 10px; }
+        .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 11px; padding: 4px 8px; width: auto; }
         
-        /* Grid Layouts */
-        .selection-grid { display: grid; grid-template-columns: 1fr 55px 55px; gap: 4px; align-items: center; margin-bottom: 3px; }
+        .selection-grid { display: grid; grid-template-columns: 1fr 55px 55px; gap: 4px; align-items: center; margin-bottom: 4px; }
         .player-name-cell { background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #eee; font-size: 14px; display: flex; align-items: center; }
-        .t-btn { height: 40px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-weight: bold; font-size: 14px; }
+        .t-btn { height: 40px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-weight: bold; }
         .t1-active .t-btn-1 { background: var(--fb-blue); color: #fff; }
         .t2-active .t-btn-2 { background: var(--fb-red); color: #fff; }
 
-        .badge, .badge-placeholder { width: 20px; height: 20px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
-        .badge { color: white; font-size: 11px; text-align: center; line-height: 20px; font-weight: bold; }
+        .badge, .badge-placeholder { width: 18px; height: 18px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+        .badge { color: white; font-size: 10px; text-align: center; line-height: 18px; font-weight: bold; }
         .badge-1 { background: var(--fb-gold); color: #000; } .badge-2 { background: #c0c0c0; color: #000; } .badge-3 { background: #cd7f32; }
 
-        .matrix-sub-tab { display: flex; gap: 5px; margin-bottom: 10px; }
-        .matrix-sub-btn { flex: 1; padding: 8px; font-size: 12px; background: #ddd; border-radius: 5px; border: none; color: #555; }
-        .matrix-sub-btn.active { background: var(--fb-blue); color: white; }
-
-        table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: center; }
-        th, td { padding: 10px 4px; border-bottom: 1px solid #eee; }
+        .single-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #fff; border-radius: 10px; margin-bottom: 5px; border: 1px solid #eee; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
+        th, td { padding: 8px 2px; border-bottom: 1px solid #eee; }
 
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
-        .tab-btn { flex: 1; padding: 15px 5px; border: none; background: none; font-size: 10px; color: #888; min-width: 55px; }
+        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: none; font-size: 9px; color: #888; min-width: 55px; }
         .tab-btn.active { color: var(--fb-blue); border-top: 3px solid var(--fb-blue); font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -56,34 +51,25 @@
 
 <div class="container">
     <div id="tab-play" class="tab-content active">
-        <div class="card" style="padding:8px;">
-            <h3 style="font-size:14px;">Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
+        <div class="card">
+            <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
             <div id="selectionListContainer"></div>
-            
             <div style="display: grid; grid-template-columns: 1fr 30px 1fr; gap: 5px; margin-top:10px;">
-                <div>
-                    <div id="t1Names" class="team-display color-t1"></div>
-                    <input type="number" id="s1" placeholder="T1 Score" style="width:100%; text-align:center; font-size:20px;">
-                </div>
-                <div style="display:flex; align-items:center; justify-content:center; padding-top:20px; font-weight:bold;">VS</div>
-                <div>
-                    <div id="t2Names" class="team-display color-t2"></div>
-                    <input type="number" id="s2" placeholder="T2 Score" style="width:100%; text-align:center; font-size:20px;">
-                </div>
+                <div><div id="t1Names" class="team-display color-t1"></div><input type="number" id="s1" style="width:100%; text-align:center; font-size:20px;"></div>
+                <div style="padding-top:25px; font-weight:bold; text-align:center;">VS</div>
+                <div><div id="t2Names" class="team-display color-t2"></div><input type="number" id="s2" style="width:100%; text-align:center; font-size:20px;"></div>
             </div>
-            <button class="btn-blue" style="margin-top:10px; height:50px;" onclick="recordMatch()">SUBMIT RESULT</button>
+            <button class="btn-blue" style="margin-top:12px; height:45px;" onclick="recordMatch()">SUBMIT RESULT</button>
         </div>
     </div>
 
     <div id="tab-matrix" class="tab-content">
         <div class="card">
-            <div class="matrix-sub-tab">
-                <button class="matrix-sub-btn active" id="btn-m-partner" onclick="setMatrixMode('partner')">Partners</button>
-                <button class="matrix-sub-btn" id="btn-m-opponent" onclick="setMatrixMode('opponent')">Opponents</button>
+            <div style="display:flex; gap:5px; margin-bottom:10px;">
+                <button class="btn-outline" style="flex:1" onclick="setMatrixMode('partner')">Partners</button>
+                <button class="btn-outline" style="flex:1" onclick="setMatrixMode('opponent')">Opponents</button>
             </div>
-            <div style="overflow-x:auto;">
-                <table id="matrixTable"></table>
-            </div>
+            <div style="overflow-x:auto;"><table id="matrixTable"></table></div>
         </div>
     </div>
 
@@ -93,10 +79,17 @@
 
     <div id="tab-rank" class="tab-content">
         <div class="card">
-            <h3>🏆 Leaderboard <select id="rankEventFilter" onchange="updateUI()" style="font-size:11px;"></select></h3>
+            <h3>🏆 Rank <select id="rankEventFilter" onchange="updateUI()" style="font-size:10px;"></select></h3>
             <table>
                 <thead><tr><th>#</th><th style="text-align:left">Player</th><th>G</th><th>Pts</th><th>PPG</th></tr></thead>
                 <tbody id="leaderboardBody"></tbody>
+            </table>
+        </div>
+        <div class="card">
+            <h3>👥 Dominant Pairs</h3>
+            <table>
+                <thead><tr><th>#</th><th style="text-align:left">Pair</th><th>G</th><th>W-L</th><th>%</th></tr></thead>
+                <tbody id="pairsBody"></tbody>
             </table>
         </div>
     </div>
@@ -113,18 +106,26 @@
             <h3>Add Player</h3>
             <div style="display:flex; gap:5px;">
                 <input type="text" id="newName" placeholder="Name" maxlength="15" style="flex:2;">
-                <input type="number" id="newSkill" placeholder="S1-9" style="flex:1;" value="5">
+                <input type="number" id="newSkill" style="flex:1;" value="5">
                 <button class="btn-blue" style="flex:1;" onclick="addPlayer()">ADD</button>
             </div>
         </div>
         <div class="card">
-            <h3>Scoring Rules</h3>
-            <div style="display:grid; grid-template-columns: 1fr 80px; gap:8px; font-size:13px; align-items:center;">
+            <h3>Tournaments</h3>
+            <div id="eventAdminList"></div>
+            <div style="display:flex; gap:5px; margin-top:10px;">
+                <input type="text" id="newEventName" placeholder="New Event Name" style="flex:1;">
+                <button class="btn-blue" style="width:70px;" onclick="addEvent()">CREATE</button>
+            </div>
+        </div>
+        <div class="card">
+            <h3>Rules</h3>
+            <div style="display:grid; grid-template-columns: 1fr 80px; gap:5px; font-size:12px; align-items:center;">
                 <label>Win Bonus:</label><input type="number" id="winBonus">
                 <label>Margin Multi:</label><input type="number" step="0.1" id="marginMult">
-                <label>Losing Deduction:</label><input type="number" step="0.1" id="loseDeduct">
+                <label>Lose Deduct:</label><input type="number" step="0.1" id="loseDeduct">
             </div>
-            <button onclick="updateSettings()" style="margin-top:10px; background:var(--fb-blue); width:100%;">Save Rules</button>
+            <button onclick="updateSettings()" style="margin-top:10px; background:var(--fb-blue); width:100%;">SAVE RULES</button>
         </div>
     </div>
 </div>
@@ -155,50 +156,45 @@
 
     let players = []; let history = []; let events = [{id:'def', name:'Regular', active:true}];
     let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1 };
-    let selections = {};
-    let matrixMode = 'partner';
+    let selections = {}; let matrixMode = 'partner';
 
     cloudDoc.onSnapshot(doc => {
         if(doc.exists) {
             const d = doc.data();
             players = d.players || []; history = d.history || []; events = d.events || events;
-            if(d.config) {
-                config = d.config;
-                document.getElementById('winBonus').value = config.winBonus;
-                document.getElementById('marginMult').value = config.marginMult;
-                document.getElementById('loseDeduct').value = config.loseDeduct || 0;
-            }
+            if(d.config) config = d.config;
             updateUI();
         }
     });
 
     function save() { cloudDoc.set({ players, history, events, config }); }
-    function setMatrixMode(m) { 
-        matrixMode = m; 
-        document.getElementById('btn-m-partner').classList.toggle('active', m==='partner');
-        document.getElementById('btn-m-opponent').classList.toggle('active', m==='opponent');
-        updateUI(); 
-    }
+    function auth(pwd) { return prompt("Password:") === pwd; }
+    function setMatrixMode(m) { matrixMode = m; updateUI(); }
+    function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-'+id).classList.add('active'); btn.classList.add('active'); }
 
     function updateUI() {
-        // Scoring Logic
-        let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0});
+        // Event Filter
+        const ef = document.getElementById('rankEventFilter');
+        const cur = ef.value;
+        ef.innerHTML = '<option value="all">Lifetime</option>';
+        events.forEach(e => ef.innerHTML += `<option value="${e.id}" ${cur==e.id?'selected':''}>${e.name}</option>`);
+
+        // Scoring & Leaderboard
+        let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0, w:0, l:0});
         history.forEach(m => {
             const diff = Math.abs(m.s1 - m.s2);
             [...m.t1, ...m.t2].forEach(n => {
                 if(!st[n]) return; st[n].g++;
-                const isT1 = m.t1.includes(n);
-                const won = (isT1 && m.s1 > m.s2) || (!isT1 && m.s2 > m.s1);
-                const marginBonus = diff * config.marginMult;
-                if(won) st[n].pts += config.winBonus + marginBonus;
-                else st[n].pts -= (diff * (config.loseDeduct || 0));
+                const won = (m.t1.includes(n) && m.s1 > m.s2) || (m.t2.includes(n) && m.s2 > m.s1);
+                if(won) { st[n].pts += config.winBonus + (diff * config.marginMult); st[n].w++; }
+                else { st[n].pts -= (diff * (config.loseDeduct || 0)); st[n].l++; }
             });
         });
 
         const sorted = Object.keys(st).map(n => ({name:n, ...st[n]})).sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
         const top3Names = sorted.filter(x => x.pts > 0).slice(0,3).map(x => x.name);
 
-        // PLAY TAB
+        // Play Screen
         document.getElementById('selectionListContainer').innerHTML = players.filter(p => p.present)
             .sort((a,b) => sorted.findIndex(x => x.name===a.name) - sorted.findIndex(x => x.name===b.name))
             .map(p => {
@@ -211,69 +207,49 @@
                 </div>`;
             }).join('');
 
-        const t1List = Object.keys(selections).filter(n => selections[n] === 1);
-        const t2List = Object.keys(selections).filter(n => selections[n] === 2);
-        document.getElementById('t1Names').innerText = t1List.join(" & ");
-        document.getElementById('t2Names').innerText = t2List.join(" & ");
+        document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
+        document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
 
-        // MATRIX TAB
-        let mData = {};
-        players.forEach(p1 => {
-            mData[p1.name] = {};
-            players.forEach(p2 => mData[p1.name][p2.name] = 0);
-        });
-
+        // Matrix
+        let mData = {}; players.forEach(p1 => { mData[p1.name] = {}; players.forEach(p2 => mData[p1.name][p2.name] = 0); });
         history.forEach(m => {
-            if(matrixMode === 'partner') {
-                [m.t1, m.t2].forEach(team => {
-                    if(team.length === 2) {
-                        mData[team[0]][team[1]]++;
-                        mData[team[1]][team[0]]++;
-                    }
-                });
-            } else {
-                m.t1.forEach(p1 => m.t2.forEach(p2 => { mData[p1][p2]++; mData[p2][p1]++; }));
-            }
+            if(matrixMode === 'partner') { [m.t1, m.t2].forEach(team => { if(team.length===2) { mData[team[0]][team[1]]++; mData[team[1]][team[0]]++; } }); }
+            else { m.t1.forEach(p1 => m.t2.forEach(p2 => { mData[p1][p2]++; mData[p2][p1]++; })); }
         });
-
         let mHtml = `<tr><th></th>${players.map(p => `<th>${p.name.substring(0,3)}</th>`).join('')}</tr>`;
         players.forEach(p1 => {
             mHtml += `<tr><td style="text-align:left"><b>${p1.name}</b></td>`;
-            players.forEach(p2 => {
-                const val = mData[p1.name][p2.name];
-                mHtml += `<td style="color:${val>0?'#000':'#ccc'}">${p1.name===p2.name?'-':val}</td>`;
-            });
+            players.forEach(p2 => mHtml += `<td>${p1.name===p2.name?'-':mData[p1.name][p2.name]}</td>`);
             mHtml += `</tr>`;
         });
         document.getElementById('matrixTable').innerHTML = mHtml;
 
-        // OTHER TABS (Simplified)
-        document.getElementById('rosterList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `
-            <div class="single-row" style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:10px; border-radius:8px; margin-bottom:5px;">
-                <span><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b></span>
-                <div><input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:45px;"><button class="btn-outline" onclick="deletePlayer('${p.name}')">🗑️</button></div>
-            </div>`).join('');
+        // Rank Tab (Dominant Pairs)
+        let ps = {}; history.forEach(m => { [ {t:m.t1, s:m.s1, o:m.s2}, {t:m.t2, s:m.s2, o:m.s1} ].forEach(x => { const k = x.t.sort().join(" & "); if(!ps[k]) ps[k] = {g:0, w:0, l:0}; ps[k].g++; if(x.s > x.o) ps[k].w++; else ps[k].l++; }); });
+        const sPairs = Object.keys(ps).map(k => ({n:k, ...ps[k]})).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
+        document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
+        document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`).join('');
 
-        document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.name}</td><td>${p.g}</td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`).join('');
+        // Admin Tab (Events)
+        document.getElementById('eventAdminList').innerHTML = events.map(e => `<div class="single-row"><span>${e.name} <small>(${e.active?'Active':'Closed'})</small></span><button class="btn-outline" onclick="toggleEvent('${e.id}')">${e.active?'Close':'Open'}</button></div>`).join('');
+        document.getElementById('rosterList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="single-row"><span><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b></span><div><input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px;"><button class="btn-outline" onclick="deletePlayer('${p.name}')">🗑️</button></div></div>`).join('');
+        
+        // History Tab
+        document.getElementById('historyList').innerHTML = [...history].reverse().map(m => { const w1 = m.s1 >= m.s2; return `<div class="single-row"><div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small></div><div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button><button class="btn-outline" style="color:red" onclick="deleteMatch(${m.id})">X</button></div></div>`; }).join('');
     }
 
-    function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-'+id).classList.add('active'); btn.classList.add('active'); }
+    function addPlayer() { const n = document.getElementById('newName'); if(n.value){ players.push({name:n.value.trim(), skill:parseInt(document.getElementById('newSkill').value), present:false, lastPlayed:0}); n.value=''; save(); } }
     function selectTeam(n, t) { if(selections[n]===t) delete selections[n]; else { if(Object.values(selections).filter(v=>v===t).length>=2) return; selections[n]=t; } updateUI(); }
-    function togglePresence(n) { const p = players.find(x=>x.name===n); p.present = !p.present; save(); }
-    function addPlayer() { const n = document.getElementById('newName'); const s = document.getElementById('newSkill'); if(n.value){ players.push({name:n.value.trim(), skill:parseInt(s.value), present:false, lastPlayed:0}); n.value=''; save(); } }
-    function recordMatch() { 
-        const t1 = Object.keys(selections).filter(n => selections[n] === 1);
-        const t2 = Object.keys(selections).filter(n => selections[n] === 2);
-        const s1 = parseInt(document.getElementById('s1').value);
-        const s2 = parseInt(document.getElementById('s2').value);
-        if(t1.length < 2 || isNaN(s1)) return alert("Select teams and scores!");
-        history.push({ t1, t2, s1, s2, id: Date.now(), time: Date.now() });
-        selections = {}; document.getElementById('s1').value=''; document.getElementById('s2').value=''; save();
-    }
-    function updateSettings() { config.winBonus = parseFloat(document.getElementById('winBonus').value); config.marginMult = parseFloat(document.getElementById('marginMult').value); config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value); save(); alert("Saved"); }
-    function suggestTeams() { let pool = players.filter(p=>p.present).sort((a,b)=>a.lastPlayed-b.lastPlayed).slice(0,4); pool.sort((a,b)=>a.skill-b.skill); selections={}; selections[pool[0].name]=1; selections[pool[3].name]=1; selections[pool[1].name]=2; selections[pool[2].name]=2; updateUI(); }
-    function updateSkill(n,v) { players.find(x=>x.name===n).skill = parseInt(v); save(); }
+    function togglePresence(n) { players.find(x=>x.name===n).present = !players.find(x=>x.name===n).present; save(); }
+    function addEvent() { if(!auth(ADMIN_PWD)) return; const n = document.getElementById('newEventName').value.trim(); if(n) { events.forEach(e => e.active = false); events.push({id:'ev_'+Date.now(), name:n, active:true}); save(); } }
+    function toggleEvent(id) { if(!auth(ADMIN_PWD)) return; const ev = events.find(e => e.id === id); ev.active = !ev.active; save(); }
+    function recordMatch() { const t1 = Object.keys(selections).filter(n => selections[n] === 1); const t2 = Object.keys(selections).filter(n => selections[n] === 2); const s1 = parseInt(document.getElementById('s1').value); const s2 = parseInt(document.getElementById('s2').value); if(t1.length < 2 || isNaN(s1)) return alert("Select teams and scores!"); history.push({ t1, t2, s1, s2, id: Date.now(), time: Date.now() }); selections = {}; document.getElementById('s1').value=''; document.getElementById('s2').value=''; save(); }
+    function updateSettings() { if(!auth(ADMIN_PWD)) return; config.winBonus = parseFloat(document.getElementById('winBonus').value); config.marginMult = parseFloat(document.getElementById('marginMult').value); config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value); save(); alert("Saved"); }
     function deletePlayer(n) { if(confirm("Delete?")) { players=players.filter(x=>x.name!==n); save(); } }
+    function updateSkill(n,v) { players.find(x=>x.name===n).skill = parseInt(v); save(); }
+    function deleteMatch(id) { if(auth(SUPER_PWD)) { history = history.filter(m => m.id !== id); save(); } }
+    function editMatch(id) { if(!auth(SUPER_PWD)) return; let m = history.find(x => x.id === id); let ns1 = prompt("T1 Score:", m.s1); let ns2 = prompt("T2 Score:", m.s2); if(ns1 !== null) { m.s1 = parseInt(ns1); m.s2 = parseInt(ns2); save(); } }
+    function suggestTeams() { let pool = players.filter(p=>p.present).sort((a,b)=>a.lastPlayed-b.lastPlayed).slice(0,4); pool.sort((a,b)=>a.skill-b.skill); selections={}; selections[pool[0].name]=1; selections[pool[3].name]=1; selections[pool[1].name]=2; selections[pool[2].name]=2; updateUI(); }
 </script>
 </body>
 </html>
