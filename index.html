@@ -3,40 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fit Boys Pro Master</title>
+    <title>Fit Boys Badminton League</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
     <style>
         :root { --fb-blue: #1877f2; --fb-red: #dc3545; --fb-gray: #f0f2f5; --fb-green: #28a745; --fb-gold: #ffd700; }
-        body { font-family: -apple-system, sans-serif; margin: 0; background: var(--fb-gray); padding-bottom: 110px; font-size: 16px; }
-        .header { background: var(--fb-blue); color: white; padding: 12px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 1000; }
-        .container { padding: 5px; max-width: 600px; margin: auto; }
-        .card { background: white; padding: 12px; margin-bottom: 8px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h3 { margin: 0 0 8px 0; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+        body { font-family: -apple-system, sans-serif; margin: 0; background: var(--fb-gray); padding-bottom: 110px; font-size: 15px; }
+        .header { background: var(--fb-blue); color: white; padding: 8px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 1000; }
+        .container { padding: 4px; max-width: 600px; margin: auto; }
+        .card { background: white; padding: 10px; margin-bottom: 6px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h3 { margin: 0 0 6px 0; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 3px; display: flex; justify-content: space-between; align-items: center; }
         
-        .team-display { font-size: 11px; font-weight: bold; height: 34px; display: flex; align-items: flex-end; justify-content: center; text-align: center; line-height: 1.1; }
+        /* Compact Team Display */
+        .team-display { font-size: 10px; font-weight: bold; height: 28px; display: flex; align-items: flex-end; justify-content: center; text-align: center; line-height: 1; margin-bottom: 2px; }
         .color-t1 { color: var(--fb-blue); } .color-t2 { color: var(--fb-red); }
 
-        input, select, button { padding: 10px; margin: 4px 0; border-radius: 8px; border: 1px solid #ccd0d5; font-size: 15px; box-sizing: border-box; }
+        input, select, button { padding: 8px; margin: 2px 0; border-radius: 8px; border: 1px solid #ccd0d5; font-size: 14px; box-sizing: border-box; }
         button { background: var(--fb-green); color: white; border: none; font-weight: bold; cursor: pointer; }
         .btn-blue { background: var(--fb-blue); width: 100%; }
-        .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 11px; padding: 4px 8px; width: auto; }
+        .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 10px; padding: 3px 6px; width: auto; }
         
-        .selection-grid { display: grid; grid-template-columns: 1fr 55px 55px; gap: 4px; align-items: center; margin-bottom: 4px; }
-        .player-name-cell { background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #eee; font-size: 14px; display: flex; align-items: center; }
-        .t-btn { height: 40px; border: 1px solid #ddd; border-radius: 8px; background: #fff; font-weight: bold; }
-        .t1-active .t-btn-1 { background: var(--fb-blue); color: #fff; }
-        .t2-active .t-btn-2 { background: var(--fb-red); color: #fff; }
+        /* Shaded Labels T1/T2 */
+        .selection-grid { display: grid; grid-template-columns: 1fr 48px 48px; gap: 3px; align-items: center; margin-bottom: 3px; }
+        .player-name-cell { background: #fff; padding: 8px; border-radius: 8px; border: 1px solid #eee; font-size: 13px; display: flex; align-items: center; height: 36px; box-sizing: border-box;}
+        .t-btn { height: 36px; border: 1px solid #eee; border-radius: 8px; background: #fff; font-weight: bold; color: #ccc; font-size: 11px; }
+        .t1-active .t-btn-1 { background: var(--fb-blue); color: #fff; border-color: var(--fb-blue); }
+        .t2-active .t-btn-2 { background: var(--fb-red); color: #fff; border-color: var(--fb-red); }
+        .t1-active .player-name-cell { background: #e7f3ff; border-color: var(--fb-blue); }
+        .t2-active .player-name-cell { background: #ffeef0; border-color: var(--fb-red); }
 
-        .badge, .badge-placeholder { width: 18px; height: 18px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
-        .badge { color: white; font-size: 10px; text-align: center; line-height: 18px; font-weight: bold; }
+        .badge, .badge-placeholder { width: 16px; height: 16px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+        .badge { color: white; font-size: 9px; text-align: center; line-height: 16px; font-weight: bold; }
         .badge-1 { background: var(--fb-gold); color: #000; } .badge-2 { background: #c0c0c0; color: #000; } .badge-3 { background: #cd7f32; }
 
-        .single-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #fff; border-radius: 10px; margin-bottom: 5px; border: 1px solid #eee; }
+        .single-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; background: #fff; border-radius: 10px; margin-bottom: 4px; border: 1px solid #eee; }
         table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
-        th, td { padding: 8px 2px; border-bottom: 1px solid #eee; }
+        th, td { padding: 6px 2px; border-bottom: 1px solid #eee; }
 
         .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
         .tab-btn { flex: 1; padding: 12px 5px; border: none; background: none; font-size: 9px; color: #888; min-width: 55px; }
@@ -47,25 +51,25 @@
 </head>
 <body>
 
-<div class="header">🏸 Fit Boys Pro Master</div>
+<div class="header">🏸 Fit Boys Badminton League</div>
 
 <div class="container">
     <div id="tab-play" class="tab-content active">
-        <div class="card">
+        <div class="card" style="padding:6px;">
             <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
             <div id="selectionListContainer"></div>
-            <div style="display: grid; grid-template-columns: 1fr 30px 1fr; gap: 5px; margin-top:10px;">
-                <div><div id="t1Names" class="team-display color-t1"></div><input type="number" id="s1" style="width:100%; text-align:center; font-size:20px;"></div>
-                <div style="padding-top:25px; font-weight:bold; text-align:center;">VS</div>
-                <div><div id="t2Names" class="team-display color-t2"></div><input type="number" id="s2" style="width:100%; text-align:center; font-size:20px;"></div>
+            <div style="display: grid; grid-template-columns: 1fr 20px 1fr; gap: 4px; margin-top:6px;">
+                <div><div id="t1Names" class="team-display color-t1"></div><input type="number" id="s1" placeholder="Score" style="width:100%; text-align:center; font-size:18px;"></div>
+                <div style="padding-top:20px; font-weight:bold; text-align:center; font-size:12px;">VS</div>
+                <div><div id="t2Names" class="team-display color-t2"></div><input type="number" id="s2" placeholder="Score" style="width:100%; text-align:center; font-size:18px;"></div>
             </div>
-            <button class="btn-blue" style="margin-top:12px; height:45px;" onclick="recordMatch()">SUBMIT RESULT</button>
+            <button class="btn-blue" style="margin-top:8px; height:40px;" onclick="recordMatch()">SUBMIT RESULT</button>
         </div>
     </div>
 
     <div id="tab-matrix" class="tab-content">
         <div class="card">
-            <div style="display:flex; gap:5px; margin-bottom:10px;">
+            <div style="display:flex; gap:5px; margin-bottom:8px;">
                 <button class="btn-outline" style="flex:1" onclick="setMatrixMode('partner')">Partners</button>
                 <button class="btn-outline" style="flex:1" onclick="setMatrixMode('opponent')">Opponents</button>
             </div>
@@ -96,7 +100,12 @@
 
     <div id="tab-hist" class="tab-content">
         <div class="card">
-            <h3>🕒 History <button class="btn-outline" onclick="window.print()">Print</button></h3>
+            <h3>🕒 History 
+                <div style="display:flex; gap:4px;">
+                    <button class="btn-outline" style="color:var(--fb-red); border-color:var(--fb-red);" onclick="clearTournamentRecords()">Reset Event</button>
+                    <button class="btn-outline" onclick="window.print()">Print</button>
+                </div>
+            </h3>
             <div id="historyList"></div>
         </div>
     </div>
@@ -113,19 +122,19 @@
         <div class="card">
             <h3>Tournaments</h3>
             <div id="eventAdminList"></div>
-            <div style="display:flex; gap:5px; margin-top:10px;">
-                <input type="text" id="newEventName" placeholder="New Event Name" style="flex:1;">
+            <div style="display:flex; gap:5px; margin-top:8px;">
+                <input type="text" id="newEventName" placeholder="New Event" style="flex:1;">
                 <button class="btn-blue" style="width:70px;" onclick="addEvent()">CREATE</button>
             </div>
         </div>
         <div class="card">
             <h3>Rules</h3>
-            <div style="display:grid; grid-template-columns: 1fr 80px; gap:5px; font-size:12px; align-items:center;">
+            <div style="display:grid; grid-template-columns: 1fr 80px; gap:4px; font-size:12px; align-items:center;">
                 <label>Win Bonus:</label><input type="number" id="winBonus">
                 <label>Margin Multi:</label><input type="number" step="0.1" id="marginMult">
                 <label>Lose Deduct:</label><input type="number" step="0.1" id="loseDeduct">
             </div>
-            <button onclick="updateSettings()" style="margin-top:10px; background:var(--fb-blue); width:100%;">SAVE RULES</button>
+            <button onclick="updateSettings()" style="margin-top:8px; background:var(--fb-blue); width:100%;">SAVE RULES</button>
         </div>
     </div>
 </div>
@@ -173,13 +182,11 @@
     function switchTab(id, btn) { document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); document.getElementById('tab-'+id).classList.add('active'); btn.classList.add('active'); }
 
     function updateUI() {
-        // Event Filter
         const ef = document.getElementById('rankEventFilter');
         const cur = ef.value;
         ef.innerHTML = '<option value="all">Lifetime</option>';
         events.forEach(e => ef.innerHTML += `<option value="${e.id}" ${cur==e.id?'selected':''}>${e.name}</option>`);
 
-        // Scoring & Leaderboard
         let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0, w:0, l:0});
         history.forEach(m => {
             const diff = Math.abs(m.s1 - m.s2);
@@ -194,7 +201,6 @@
         const sorted = Object.keys(st).map(n => ({name:n, ...st[n]})).sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
         const top3Names = sorted.filter(x => x.pts > 0).slice(0,3).map(x => x.name);
 
-        // Play Screen
         document.getElementById('selectionListContainer').innerHTML = players.filter(p => p.present)
             .sort((a,b) => sorted.findIndex(x => x.name===a.name) - sorted.findIndex(x => x.name===b.name))
             .map(p => {
@@ -224,18 +230,27 @@
         });
         document.getElementById('matrixTable').innerHTML = mHtml;
 
-        // Rank Tab (Dominant Pairs)
         let ps = {}; history.forEach(m => { [ {t:m.t1, s:m.s1, o:m.s2}, {t:m.t2, s:m.s2, o:m.s1} ].forEach(x => { const k = x.t.sort().join(" & "); if(!ps[k]) ps[k] = {g:0, w:0, l:0}; ps[k].g++; if(x.s > x.o) ps[k].w++; else ps[k].l++; }); });
         const sPairs = Object.keys(ps).map(k => ({n:k, ...ps[k]})).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
         document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
         document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`).join('');
 
-        // Admin Tab (Events)
         document.getElementById('eventAdminList').innerHTML = events.map(e => `<div class="single-row"><span>${e.name} <small>(${e.active?'Active':'Closed'})</small></span><button class="btn-outline" onclick="toggleEvent('${e.id}')">${e.active?'Close':'Open'}</button></div>`).join('');
         document.getElementById('rosterList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="single-row"><span><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b></span><div><input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px;"><button class="btn-outline" onclick="deletePlayer('${p.name}')">🗑️</button></div></div>`).join('');
         
-        // History Tab
         document.getElementById('historyList').innerHTML = [...history].reverse().map(m => { const w1 = m.s1 >= m.s2; return `<div class="single-row"><div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small></div><div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button><button class="btn-outline" style="color:red" onclick="deleteMatch(${m.id})">X</button></div></div>`; }).join('');
+    }
+
+    function clearTournamentRecords() {
+        const ev = events.find(e => e.active);
+        if(!ev) return alert("Select an active event first.");
+        if(auth(SUPER_PWD)) {
+            if(confirm(`Wipe all matches for "${ev.name}" and reset player queue?`)) {
+                history = history.filter(m => m.eventId !== ev.id);
+                players.forEach(p => p.lastPlayed = 0);
+                save();
+            }
+        }
     }
 
     function addPlayer() { const n = document.getElementById('newName'); if(n.value){ players.push({name:n.value.trim(), skill:parseInt(document.getElementById('newSkill').value), present:false, lastPlayed:0}); n.value=''; save(); } }
@@ -243,7 +258,7 @@
     function togglePresence(n) { players.find(x=>x.name===n).present = !players.find(x=>x.name===n).present; save(); }
     function addEvent() { if(!auth(ADMIN_PWD)) return; const n = document.getElementById('newEventName').value.trim(); if(n) { events.forEach(e => e.active = false); events.push({id:'ev_'+Date.now(), name:n, active:true}); save(); } }
     function toggleEvent(id) { if(!auth(ADMIN_PWD)) return; const ev = events.find(e => e.id === id); ev.active = !ev.active; save(); }
-    function recordMatch() { const t1 = Object.keys(selections).filter(n => selections[n] === 1); const t2 = Object.keys(selections).filter(n => selections[n] === 2); const s1 = parseInt(document.getElementById('s1').value); const s2 = parseInt(document.getElementById('s2').value); if(t1.length < 2 || isNaN(s1)) return alert("Select teams and scores!"); history.push({ t1, t2, s1, s2, id: Date.now(), time: Date.now() }); selections = {}; document.getElementById('s1').value=''; document.getElementById('s2').value=''; save(); }
+    function recordMatch() { const t1 = Object.keys(selections).filter(n => selections[n] === 1); const t2 = Object.keys(selections).filter(n => selections[n] === 2); const s1 = parseInt(document.getElementById('s1').value); const s2 = parseInt(document.getElementById('s2').value); if(t1.length < 2 || isNaN(s1)) return alert("Missing data!"); const now = Date.now(); history.push({ t1, t2, s1, s2, id: now, time: now, eventId: events.find(e=>e.active)?.id || 'def' }); [...t1, ...t2].forEach(n => players.find(x=>x.name===n).lastPlayed = now); selections = {}; document.getElementById('s1').value=''; document.getElementById('s2').value=''; save(); }
     function updateSettings() { if(!auth(ADMIN_PWD)) return; config.winBonus = parseFloat(document.getElementById('winBonus').value); config.marginMult = parseFloat(document.getElementById('marginMult').value); config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value); save(); alert("Saved"); }
     function deletePlayer(n) { if(confirm("Delete?")) { players=players.filter(x=>x.name!==n); save(); } }
     function updateSkill(n,v) { players.find(x=>x.name===n).skill = parseInt(v); save(); }
