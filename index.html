@@ -91,6 +91,7 @@
           <div style="display:flex; gap:5px; align-items:center;">
             <input type="number" id="planGameCount" value="10" min="1" max="99" style="width:50px; padding:4px; font-size:12px;" />
             <button class="btn-outline" onclick="generateFullDayPlan()">Generate</button>
+          <button class="btn-outline" style="border-color:var(--fb-blue);color:var(--fb-blue);" onclick="copyGamePlan()">Copy</button>
           </div>
         </h3>
 
@@ -119,7 +120,7 @@
       <div class="card">
         <h3>🏆 Rank <select id="rankEventFilter" onchange="updateUI()" style="font-size:10px;"></select></h3>
         <table>
-          <thead><tr><th>#</th><th style="text-align:left">Player</th><th>G</th><th>Pts</th><th>PPG</th></tr></thead>
+          <thead><tr><th>#</th><th style="text-align:left">Player</th><th>G (W/L)</th><th>Pts</th><th>PPG</th></tr></thead>
           <tbody id="leaderboardBody"></tbody>
         </table>
       </div>
@@ -159,8 +160,8 @@
         <h3>Rules</h3>
         <div style="display:grid; grid-template-columns: 1fr 80px; gap:4px; font-size:12px; align-items:center;">
           <label>Win Bonus:</label><input type="number" id="winBonus" />
-          <label>Margin Multi:</label><input type="number" step="0.1" id="marginMult" />
-          <label>Lose Deduct:</label><input type="number" step="0.1" id="loseDeduct" />
+          <label>Winner Margin Multi:</label><input type="number" step="0.1" id="marginMult" />
+          <label>Loser Point Multi:</label><input type="number" step="0.1" id="loseDeduct" />
         </div>
 
         <div style="margin-top:8px; border-top:1px solid #eee; padding-top:8px;">
@@ -280,6 +281,11 @@
   let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1, skillMode: 'manual' };
   let selections = {};
   let matrixMode = 'partner';
+// Last generated plan cache (for Copy button)
+let lastGeneratedPlan = []; // [{g:1,t1:[names],t2:[names]}]
+let lastPlanTotals = {};
+let lastPlanStartCounts = {};
+
 
   // ─────────────────────────────────────────
   // Pairing constraints
@@ -763,7 +769,7 @@
         const isT1 = m.t1.includes(n);
         const won = (isT1 && m.s1 > m.s2) || (!isT1 && m.s2 > m.s1);
         if (won) { st[n].pts += config.winBonus + (diff * config.marginMult); st[n].w++; }
-        else { st[n].pts -= (diff * (config.loseDeduct || 0)); st[n].l++; }
+        else { const losingScore = isT1 ? m.s1 : m.s2; st[n].pts += (losingScore * (config.loseDeduct || 0)); st[n].l++; }
       });
     });
 
@@ -830,7 +836,7 @@
     document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
 
     document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) =>
-      `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`
+      `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g} <span style="font-size:9px;color:#888;">(${p.w}/${p.l})</span></td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`
     ).join('');
 
     // roster
@@ -1007,7 +1013,65 @@
   // ─────────────────────────────────────────
   // Day Plan (lookahead) + NEW totals display
   // ─────────────────────────────────────────
-  function generateFullDayPlan() {
+  
+
+  // ─────────────────────────────────────────
+  // Copy game plan as text (WhatsApp/Email friendly)
+  // ─────────────────────────────────────────
+  function copyGamePlan() {
+    if (!lastGeneratedPlan || lastGeneratedPlan.length === 0) {
+      alert('Generate a plan first, then press Copy.');
+      return;
+    }
+
+    // Build totals line
+    const names = Object.keys(lastPlanTotals).sort((a,b)=>a.localeCompare(b));
+    const totalsLines = names.map(n => {
+      const total = lastPlanTotals[n] || 0;
+      const already = lastPlanStartCounts[n] || 0;
+      const add = Math.max(0, total - already);
+      return `${n}: ${total} (+${add})`;
+    });
+
+    const lines = [];
+    lines.push('🏸 Game Plan');
+    lines.push('');
+    lastGeneratedPlan.forEach(x => {
+      lines.push(`Game ${x.g}: ${x.t1.join(' & ')} vs ${x.t2.join(' & ')}`);
+    });
+    lines.push('');
+    lines.push('Total games per player (today + plan):');
+    lines.push(...totalsLines);
+
+    const text = lines.join('\n');
+
+    // Clipboard (mobile-friendly fallback)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert('✅ Plan copied! Paste into WhatsApp / email.');
+      }).catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+
+    function fallbackCopy(t) {
+      const ta = document.createElement('textarea');
+      ta.value = t;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try {
+        document.execCommand('copy');
+        alert('✅ Plan copied! Paste into WhatsApp / email.');
+      } catch(e) {
+        alert('Copy not supported on this device.');
+      }
+      document.body.removeChild(ta);
+    }
+  }
+function generateFullDayPlan() {
     let pool = players.filter(p => p.present);
     if (pool.length < 4) return alert("Need 4 players present!");
 
@@ -1018,6 +1082,11 @@
     // starting counts (today history)
     let startCounts = {};
     pool.forEach(p => startCounts[p.name] = gamesSinceArrivalToday(p));
+
+    // cache for Copy button
+    lastGeneratedPlan = [];
+    lastPlanStartCounts = { ...startCounts };
+    
     let restStreak = computeRestStreak(pool);
 
     const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
@@ -1042,6 +1111,7 @@
         <div style="font-size:12px;"><span style="color:var(--fb-blue); font-weight:bold">${best.t1.map(pp=>pp.name).join("&")}</span> <b style="color:#999">vs</b> <span style="color:var(--fb-red); font-weight:bold">${best.t2.map(pp=>pp.name).join("&")}</span></div>
       </div>`;
 
+      lastGeneratedPlan.push({ g: g, t1: best.t1.map(pp=>pp.name), t2: best.t2.map(pp=>pp.name) });
       st = applyMatch(st, best, playing);
     }
 
@@ -1049,6 +1119,7 @@
 
     // NEW: totals per player (today history + planned games)
     const totals = st.counts;
+    lastPlanTotals = { ...totals };
     const names = pool.map(p => p.name).slice().sort((a,b) => a.localeCompare(b));
 
     let minT = Infinity, maxT = -Infinity;
@@ -1070,11 +1141,9 @@
     document.getElementById('planTotals').innerHTML = `<div style="font-size:10px; font-weight:bold; color:#333; margin-top:4px;">📌 Total games per player (today + plan)</div><div class="plan-totals-wrap">${chips}</div>${summary}`;
   }
 
-  // ─────────────────────────────────────────
-  // Reset history (FIXED):
-  // ─────────────────────────────────────────
-
-// ✅ FIXED — SAME LOGIC AS OLD WORKING badminton.html
+ 
+  
+	// ✅ RESET — proven working logic 
 	function clearTournamentRecords() {
 	  const resetId = document.getElementById('resetEventSelect').value;
 	  if (!resetId) {
@@ -1088,15 +1157,15 @@
 		return;
 	  }
 
-	  // IMPORTANT: use SUPER_PWD (same as old file)
+	  // IMPORTANT: must use SUPER_PWD
 	  if (!auth(SUPER_PWD)) return;
 
 	  if (confirm(`⚠️ Reset "${ev.name}"?\nAll matches for this event will be deleted.`)) {
 
-		// ✅ STRICT eventId filter — THIS IS THE KEY
+		// ✅ STRICT eventId filter — do NOT normalize names
 		matchHistory = matchHistory.filter(m => m.eventId !== resetId);
 
-		// same behavior as old working version
+		// same behavior as your old working file
 		players.forEach(p => p.lastPlayed = 0);
 
 		save();        // overwrite Firestore
@@ -1104,9 +1173,9 @@
 
 		alert("Event data cleared.");
 	  }
-	}
+	} 
 
-
+ 
 </script>
 </body>
 </html>
