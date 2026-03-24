@@ -1,319 +1,1112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fit Boys Pro Master</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Fit Boys Pro Master</title>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+  <style>
+    :root { --fb-blue: #1877f2; --fb-red: #dc3545; --fb-gray: #f0f2f5; --fb-green: #28a745; --fb-gold: #ffd700; }
+    body { font-family: -apple-system, sans-serif; margin: 0; background: var(--fb-gray); padding-bottom: 110px; font-size: 15px; }
+    .header { background: var(--fb-blue); color: white; padding: 6px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 1000; }
+    .container { padding: 4px; max-width: 600px; margin: auto; }
+    .card { background: white; padding: 8px; margin-bottom: 6px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    h3 { margin: 0 0 5px 0; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 2px; display: flex; justify-content: space-between; align-items: center; }
+    .last-game-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 6px; border-radius: 8px; margin-bottom: 6px; text-align: center; font-size: 11px; color: #856404; font-weight: bold; line-height: 1.2; }
+    .team-display { font-size: 10px; font-weight: bold; height: 22px; display: flex; align-items: flex-end; justify-content: center; text-align: center; line-height: 1; margin-bottom: 2px; }
+    .color-t1 { color: var(--fb-blue); } .color-t2 { color: var(--fb-red); }
+    input, select, button { padding: 8px; margin: 2px 0; border-radius: 8px; border: 1px solid #ccd0d5; font-size: 14px; box-sizing: border-box; }
+    button { background: var(--fb-green); color: white; border: none; font-weight: bold; cursor: pointer; }
+    .btn-blue { background: var(--fb-blue); width: 100%; }
+    .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 10px; padding: 4px 8px; width: auto; }
+    .btn-outline.active { background: var(--fb-blue); color: white; border-color: var(--fb-blue); }
+    .selection-grid { display: grid; grid-template-columns: 1fr 48px 48px; gap: 3px; align-items: center; margin-bottom: 2px; }
+    .player-name-cell { background: #fff; padding: 0 8px; border-radius: 8px; border: 1px solid #eee; font-size: 13px; display: flex; align-items: center; height: 34px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .t-btn { height: 34px; border: 1px solid #eee; border-radius: 8px; background: #fff; font-weight: bold; color: #ccc; font-size: 10px; padding: 0; }
+    .t1-active .t-btn-1 { background: var(--fb-blue); color: #fff; border-color: var(--fb-blue); }
+    .t2-active .t-btn-2 { background: var(--fb-red); color: #fff; border-color: var(--fb-red); }
+    .t1-active .player-name-cell { background: #e7f3ff; border-color: var(--fb-blue); }
+    .t2-active .player-name-cell { background: #ffeef0; border-color: var(--fb-red); }
+    .badge, .badge-placeholder { width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
+    .badge { color: white; font-size: 8px; text-align: center; line-height: 14px; font-weight: bold; }
+    .badge-1 { background: var(--fb-gold); color: #000; } .badge-2 { background: #c0c0c0; color: #000; } .badge-3 { background: #cd7f32; }
+    .single-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #fff; border-radius: 10px; margin-bottom: 4px; border: 1px solid #eee; }
+    table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
+    th, td { padding: 6px 2px; border-bottom: 1px solid #eee; }
+    .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
+    .tab-btn { flex: 1; padding: 12px 5px; border: none; background: none; font-size: 9px; color: #888; min-width: 55px; }
+    .tab-btn.active { color: var(--fb-blue); border-top: 3px solid var(--fb-blue); font-weight: bold; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .hist-date { display: block; font-size: 8px; color: #999; margin-top: 2px; }
+    .game-count-chip { font-size: 9px; color: #888; background: #f0f2f5; border-radius: 10px; padding: 1px 5px; margin-left: auto; margin-right: 4px; white-space: nowrap; }
+    .game-count-chip.low { color: var(--fb-green); font-weight: bold; }
+    .next-team-1 { color: var(--fb-blue); } .next-team-2 { color: var(--fb-red); }
 
-    <style>
-        :root { --fb-blue: #1877f2; --fb-red: #dc3545; --fb-gray: #f0f2f5; --fb-green: #28a745; --fb-gold: #ffd700; }
-        body { font-family: -apple-system, sans-serif; margin: 0; background: var(--fb-gray); padding-bottom: 110px; font-size: 15px; }
-        .header { background: var(--fb-blue); color: white; padding: 6px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 1000; }
-        .container { padding: 4px; max-width: 600px; margin: auto; }
-        .card { background: white; padding: 8px; margin-bottom: 6px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h3 { margin: 0 0 5px 0; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 2px; display: flex; justify-content: space-between; align-items: center; }
-        
-        .last-game-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 6px; border-radius: 8px; margin-bottom: 6px; text-align: center; font-size: 11px; color: #856404; font-weight: bold; line-height: 1.2; }
-        .team-display { font-size: 10px; font-weight: bold; height: 22px; display: flex; align-items: flex-end; justify-content: center; text-align: center; line-height: 1; margin-bottom: 2px; }
-        .color-t1 { color: var(--fb-blue); } .color-t2 { color: var(--fb-red); }
-
-        input, select, button { padding: 8px; margin: 2px 0; border-radius: 8px; border: 1px solid #ccd0d5; font-size: 14px; box-sizing: border-box; }
-        button { background: var(--fb-green); color: white; border: none; font-weight: bold; cursor: pointer; }
-        .btn-blue { background: var(--fb-blue); width: 100%; }
-        .btn-outline { background: white; color: #666; border: 1px solid #ccc; font-size: 10px; padding: 4px 8px; width: auto; }
-        .btn-outline.active { background: var(--fb-blue); color: white; border-color: var(--fb-blue); }
-        
-        /* Ultra-Compact Selection Grid */
-        .selection-grid { display: grid; grid-template-columns: 1fr 48px 48px; gap: 3px; align-items: center; margin-bottom: 2px; }
-        .player-name-cell { background: #fff; padding: 0 8px; border-radius: 8px; border: 1px solid #eee; font-size: 13px; display: flex; align-items: center; height: 34px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-        .t-btn { height: 34px; border: 1px solid #eee; border-radius: 8px; background: #fff; font-weight: bold; color: #ccc; font-size: 10px; padding: 0; }
-        .t1-active .t-btn-1 { background: var(--fb-blue); color: #fff; border-color: var(--fb-blue); }
-        .t2-active .t-btn-2 { background: var(--fb-red); color: #fff; border-color: var(--fb-red); }
-        .t1-active .player-name-cell { background: #e7f3ff; border-color: var(--fb-blue); }
-        .t2-active .player-name-cell { background: #ffeef0; border-color: var(--fb-red); }
-
-        .badge, .badge-placeholder { width: 14px; height: 14px; border-radius: 50%; margin-right: 6px; flex-shrink: 0; }
-        .badge { color: white; font-size: 8px; text-align: center; line-height: 14px; font-weight: bold; }
-        .badge-1 { background: var(--fb-gold); color: #000; } .badge-2 { background: #c0c0c0; color: #000; } .badge-3 { background: #cd7f32; }
-
-        .single-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #fff; border-radius: 10px; margin-bottom: 4px; border: 1px solid #eee; }
-        table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
-        th, td { padding: 6px 2px; border-bottom: 1px solid #eee; }
-
-        .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
-        .tab-btn { flex: 1; padding: 12px 5px; border: none; background: none; font-size: 9px; color: #888; min-width: 55px; }
-        .tab-btn.active { color: var(--fb-blue); border-top: 3px solid var(--fb-blue); font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .hist-date { display: block; font-size: 8px; color: #999; margin-top: 2px; }
-    </style>
+    /* Plan totals (mobile friendly chips) */
+    .plan-totals-wrap { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px 0; }
+    .plan-chip { font-size:10px; padding:4px 8px; border-radius:999px; background:#f0f2f5; border:1px solid #e5e7eb; color:#333; display:flex; gap:6px; align-items:center; }
+    .plan-chip b { font-size:11px; }
+    .plan-chip .delta { color:#666; font-size:9px; }
+    .plan-summary { font-size:10px; color:#666; margin-top:4px; }
+  </style>
 </head>
 <body>
+  <div class="header">🏸 Fit Boys Pro Master</div>
 
-<div class="header">🏸 Fit Boys Pro Master</div>
-
-<div class="container">
+  <div class="container">
     <div id="tab-play" class="tab-content active">
-        <div id="lastGameAlert" class="last-game-box" style="display:none;"></div>
-        <div class="card" style="padding:6px;">
-            <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
-            <div id="selectionListContainer"></div>
-            <div style="display: grid; grid-template-columns: 1fr 20px 1fr; gap: 4px; margin-top:4px;">
-                <div><div id="t1Names" class="team-display color-t1"></div><input type="number" id="s1" placeholder="T1" style="width:100%; text-align:center; font-size:18px;"></div>
-                <div style="padding-top:18px; font-weight:bold; text-align:center; font-size:12px;">VS</div>
-                <div><div id="t2Names" class="team-display color-t2"></div><input type="number" id="s2" placeholder="T2" style="width:100%; text-align:center; font-size:18px;"></div>
-            </div>
-            <button class="btn-blue" style="margin-top:6px; height:38px;" onclick="recordMatch()">SUBMIT RESULT</button>
+      <div id="lastGameAlert" class="last-game-box" style="display:none;"></div>
+
+      <div class="card" style="padding:6px;">
+        <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
+
+        <div id="nextUpContainer" style="margin-top: 8px; padding: 6px; background: #f0f7ff; border: 1px dashed var(--fb-blue); border-radius: 10px; display: none;">
+          <div style="font-size: 9px; color: var(--fb-blue); font-weight: bold; margin-bottom: 2px; text-transform: uppercase;">🕒 On Deck (Next Game)</div>
+          <div id="nextUpNames" style="font-size: 12px; font-weight: bold; color: #333;"></div>
         </div>
+
+        <div id="selectionListContainer"></div>
+
+        <div style="display: grid; grid-template-columns: 1fr 20px 1fr; gap: 4px; margin-top:4px;">
+          <div>
+            <div id="t1Names" class="team-display color-t1"></div>
+            <input type="number" id="s1" placeholder="T1" style="width:100%; text-align:center; font-size:18px;" />
+          </div>
+          <div style="padding-top:18px; font-weight:bold; text-align:center; font-size:12px;">VS</div>
+          <div>
+            <div id="t2Names" class="team-display color-t2"></div>
+            <input type="number" id="s2" placeholder="T2" style="width:100%; text-align:center; font-size:18px;" />
+          </div>
+        </div>
+
+        <button class="btn-blue" style="margin-top:6px; height:38px;" onclick="recordMatch()">SUBMIT RESULT</button>
+      </div>
+    </div>
+
+    <div id="tab-schedule" class="tab-content">
+      <div class="card">
+        <h3>📅 Day Plan
+          <div style="display:flex; gap:5px; align-items:center;">
+            <input type="number" id="planGameCount" value="10" min="1" max="99" style="width:50px; padding:4px; font-size:12px;" />
+            <button class="btn-outline" onclick="generateFullDayPlan()">Generate</button>
+          </div>
+        </h3>
+
+        <!-- NEW: totals per player (today history + plan) -->
+        <div id="planTotals"></div>
+
+        <div id="schedulePlanList"></div>
+      </div>
     </div>
 
     <div id="tab-matrix" class="tab-content">
-        <div class="card">
-            <div style="display:flex; gap:5px; margin-bottom:8px;">
-                <button id="mPartnerBtn" class="btn-outline active" style="flex:1" onclick="setMatrixMode('partner')">Partners</button>
-                <button id="mOpponentBtn" class="btn-outline" style="flex:1" onclick="setMatrixMode('opponent')">Opponents</button>
-            </div>
-            <div style="overflow-x:auto;"><table id="matrixTable"></table></div>
+      <div class="card">
+        <div style="display:flex; gap:5px; margin-bottom:8px;">
+          <button id="mPartnerBtn" class="btn-outline active" style="flex:1" onclick="setMatrixMode('partner')">Partners</button>
+          <button id="mOpponentBtn" class="btn-outline" style="flex:1" onclick="setMatrixMode('opponent')">Opponents</button>
         </div>
+        <div style="overflow-x:auto;"><table id="matrixTable"></table></div>
+      </div>
     </div>
 
     <div id="tab-roster" class="tab-content">
-        <div class="card"><div id="rosterList"></div></div>
+      <div class="card"><div id="rosterList"></div></div>
     </div>
 
     <div id="tab-rank" class="tab-content">
-        <div class="card">
-            <h3>🏆 Rank <select id="rankEventFilter" onchange="updateUI()" style="font-size:10px;"></select></h3>
-            <table>
-                <thead><tr><th>#</th><th style="text-align:left">Player</th><th>G</th><th>Pts</th><th>PPG</th></tr></thead>
-                <tbody id="leaderboardBody"></tbody>
-            </table>
-        </div>
-        <div class="card">
-            <h3>👥 Dominant Pairs</h3>
-            <table>
-                <thead><tr><th>#</th><th style="text-align:left">Pair</th><th>G</th><th>W-L</th><th>%</th></tr></thead>
-                <tbody id="pairsBody"></tbody>
-            </table>
-        </div>
+      <div class="card">
+        <h3>🏆 Rank <select id="rankEventFilter" onchange="updateUI()" style="font-size:10px;"></select></h3>
+        <table>
+          <thead><tr><th>#</th><th style="text-align:left">Player</th><th>G</th><th>Pts</th><th>PPG</th></tr></thead>
+          <tbody id="leaderboardBody"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h3>👥 Dominant Pairs</h3>
+        <table>
+          <thead><tr><th>#</th><th style="text-align:left">Pair</th><th>G</th><th>W-L</th><th>%</th></tr></thead>
+          <tbody id="pairsBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div id="tab-hist" class="tab-content">
-        <div class="card">
-            <h3>🕒 History 
-                <div style="display:flex; gap:4px; align-items:center;">
-                    <select id="resetEventSelect" style="font-size:10px; padding:2px; height:24px;"></select>
-                    <button class="btn-outline" style="color:var(--fb-red); border-color:var(--fb-red);" onclick="clearTournamentRecords()">Reset</button>
-                </div>
-            </h3>
-            <div id="historyList"></div>
-        </div>
+      <div class="card">
+        <h3>🕒 History
+          <div style="display:flex; gap:4px; align-items:center;">
+            <select id="resetEventSelect" style="font-size:10px; padding:2px; height:24px;"></select>
+            <button class="btn-outline" style="color:var(--fb-red); border-color:var(--fb-red);" onclick="clearTournamentRecords()">Reset</button>
+          </div>
+        </h3>
+        <div id="historyList"></div>
+      </div>
     </div>
 
     <div id="tab-admin" class="tab-content">
-        <div class="card">
-            <h3>Add Player</h3>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="newName" placeholder="Name" maxlength="15" style="flex:2;">
-                <input type="number" id="newSkill" style="flex:1;" value="5">
-                <button class="btn-blue" style="flex:1;" onclick="addPlayer()">ADD</button>
-            </div>
+      <div class="card">
+        <h3>Add Player</h3>
+        <div style="display:flex; gap:5px;">
+          <input type="text" id="newName" placeholder="Name" maxlength="15" style="flex:2;" />
+          <input type="number" id="newSkill" style="flex:1;" value="5" />
+          <button class="btn-blue" style="flex:1;" onclick="addPlayer()">ADD</button>
         </div>
-        <div class="card">
-            <h3>Tournaments</h3>
-            <div id="eventAdminList"></div>
-            <div style="display:flex; gap:5px; margin-top:8px;">
-                <input type="text" id="newEventName" placeholder="New Event" style="flex:1;">
-                <button class="btn-blue" style="width:70px;" onclick="addEvent()">CREATE</button>
-            </div>
-        </div>
-        <div class="card">
-            <h3>Rules</h3>
-            <div style="display:grid; grid-template-columns: 1fr 80px; gap:4px; font-size:12px; align-items:center;">
-                <label>Win Bonus:</label><input type="number" id="winBonus">
-                <label>Margin Multi:</label><input type="number" step="0.1" id="marginMult">
-                <label>Lose Deduct:</label><input type="number" step="0.1" id="loseDeduct">
-            </div>
-            <button onclick="updateSettings()" style="margin-top:8px; background:var(--fb-blue); width:100%;">SAVE RULES</button>
-        </div>
-    </div>
-</div>
+      </div>
 
-<div class="tab-bar">
+      <div class="card">
+        <h3>Rules</h3>
+        <div style="display:grid; grid-template-columns: 1fr 80px; gap:4px; font-size:12px; align-items:center;">
+          <label>Win Bonus:</label><input type="number" id="winBonus" />
+          <label>Margin Multi:</label><input type="number" step="0.1" id="marginMult" />
+          <label>Lose Deduct:</label><input type="number" step="0.1" id="loseDeduct" />
+        </div>
+
+        <div style="margin-top:8px; border-top:1px solid #eee; padding-top:8px;">
+          <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">⚙️ Skill Mode</div>
+          <select id="skillModeSelect" style="width:100%; font-size:13px;">
+            <option value="manual">Manual — use skill ratings set by admin</option>
+            <option value="dynamic">Dynamic — auto-calculate from win rate (min. 20 games)</option>
+          </select>
+          <div id="skillModeInfo" style="font-size:10px; color:#888; margin-top:4px; line-height:1.4;"></div>
+        </div>
+
+        <button onclick="updateSettings()" style="margin-top:8px; background:var(--fb-blue); width:100%;">SAVE RULES</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('play', this)">🎮 Play</button>
+    <button class="tab-btn" onclick="switchTab('schedule', this)">📅 Plan</button>
     <button class="tab-btn" onclick="switchTab('matrix', this)">📊 Matrix</button>
     <button class="tab-btn" onclick="switchTab('roster', this)">📍 Roster</button>
     <button class="tab-btn" onclick="switchTab('rank', this)">🏆 Rank</button>
     <button class="tab-btn" onclick="switchTab('hist', this)">🕒 Hist</button>
     <button class="tab-btn" onclick="switchTab('admin', this)">⚙️ Admin</button>
-</div>
+  </div>
 
 <script>
-    const ADMIN_PWD = "suji"; const SUPER_PWD = "P@ssword";
-    const firebaseConfig = {
-      apiKey: "AIzaSyCn2ZdRrvfFWFJFiRbPmJi2galq768OPH4",
-      authDomain: "badmintontracker-d565c.firebaseapp.com",
-      projectId: "badmintontracker-d565c",
-      storageBucket: "badmintontracker-d565c.firebasestorage.app",
-      messagingSenderId: "592621421914",
-      appId: "1:592621421914:web:5f0e2a4ff2b56c056f5f63"
-    };
+  const ADMIN_PWD = "suji";
+  const SUPER_PWD = "P@ssword";
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const cloudDoc = db.collection('badmintonTracker').doc('FitBoys_Permanent_Data');
+  const firebaseConfig = {
+    apiKey: "AIzaSyCn2ZdRrvfFWFJFiRbPmJi2galq768OPH4",
+    authDomain: "badmintontracker-d565c.firebaseapp.com",
+    projectId: "badmintontracker-d565c",
+    storageBucket: "badmintontracker-d565c.firebasestorage.app",
+    messagingSenderId: "592621421914",
+    appId: "1:592621421914:web:5f0e2a4ff2b56c056f5f63"
+  };
 
-    let players = []; let history = []; let events = [{id:'def', name:'Regular', active:true}];
-    let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1 };
-    let selections = {}; let matrixMode = 'partner';
+  // ── Storage layer: Firebase ONLY (multi-user shared data) ──
+  let _cloudDoc = null;
+  let _isOnline = false;
 
-    cloudDoc.onSnapshot(doc => {
-        if(doc.exists) {
-            const d = doc.data();
-            players = d.players || []; history = d.history || []; events = d.events || events;
-            if(d.config) {
-                config = d.config;
-                document.getElementById('winBonus').value = config.winBonus;
-                document.getElementById('marginMult').value = config.marginMult;
-                document.getElementById('loseDeduct').value = config.loseDeduct;
-            }
-            updateUI();
+
+  function _setOnlineState(online) {
+    _isOnline = online;
+
+    const h = document.querySelector('.header');
+    let badge = document.getElementById('syncBadge');
+    if (!badge) {
+      badge = document.createElement('span');
+      badge.id = 'syncBadge';
+      badge.style.cssText = 'font-size:9px; padding:2px 6px; border-radius:10px; margin-left:6px; vertical-align:middle; cursor:default;';
+      h.appendChild(badge);
+    }
+    badge.style.background = online ? 'rgba(255,255,255,0.25)' : 'rgba(220,53,69,0.7)';
+    badge.textContent = online ? '☁️ Online' : '⚠️ Offline';
+    badge.title = online ? 'Connected — changes save to all devices' : 'No connection — changes are disabled until back online';
+
+    let banner = document.getElementById('offlineBanner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'offlineBanner';
+      banner.style.cssText = 'background:#dc3545; color:white; text-align:center; padding:6px; font-size:12px; font-weight:bold; display:none;';
+      banner.textContent = '⚠️ No connection — scores cannot be saved until back online';
+      document.querySelector('.container').prepend(banner);
+    }
+    banner.style.display = online ? 'none' : 'block';
+
+    const submitBtn = document.querySelector('button.btn-blue[onclick="recordMatch()"]');
+    if (submitBtn) {
+      submitBtn.disabled = !online;
+      submitBtn.style.opacity = online ? '1' : '0.4';
+    }
+  }
+
+  function _initFirebase() {
+    try {
+      if (window._firebaseLoadFailed || typeof firebase === 'undefined') {
+        throw new Error('Firebase SDK not available');
+      }
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+      _cloudDoc = db.collection('badmintonTracker').doc('FitBoys_Permanent_Data');
+
+      _cloudDoc.onSnapshot(doc => {
+        _setOnlineState(true);
+        if (doc.exists) {
+          const d = doc.data();
+          players = d.players || [];
+          matchHistory = d.history || [];
+          events = d.events || events;
+          if (d.config) {
+            config = d.config;
+            document.getElementById('winBonus').value = config.winBonus;
+            document.getElementById('marginMult').value = config.marginMult;
+            document.getElementById('loseDeduct').value = config.loseDeduct;
+            const sm = document.getElementById('skillModeSelect');
+            if (sm) sm.value = config.skillMode || 'manual';
+          }
+          updateUI();
         }
+      }, err => {
+        console.warn('Firestore snapshot error:', err);
+        _setOnlineState(false);
+      });
+
+    } catch (e) {
+      console.warn('Firebase init failed:', e);
+      _setOnlineState(false);
+    }
+  }
+
+  let players = [];
+  let matchHistory = [];
+  let events = [{ id:'def', name:'Regular', active:true }];
+  let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1, skillMode: 'manual' };
+  let selections = {};
+  let matrixMode = 'partner';
+
+  // ─────────────────────────────────────────
+  // Pairing constraints
+  // ─────────────────────────────────────────
+  const MAX_SKILL_GAP = 3;      // target
+  const MAX_SKILL_GAP_SOFT = 5; // fallback
+
+  const LOOKAHEAD_DEPTH = 3; // recommended sweet spot for mobile
+  const BEAM_WIDTH = 25;
+
+  window.addEventListener('DOMContentLoaded', _initFirebase);
+
+  function save() {
+    if (!_isOnline || !_cloudDoc) {
+      alert("⚠️ No connection — cannot save right now. Please try again when back online.");
+      return false;
+    }
+    const data = { players, history: matchHistory, events, config };
+    _cloudDoc.set(data).catch(err => {
+      console.warn('Firebase save failed:', err);
+      _setOnlineState(false);
+    });
+    updateUI();
+    return true;
+  }
+
+  function auth(pwd) { return prompt("Password:") === pwd; }
+
+  function setMatrixMode(m) {
+    matrixMode = m;
+    document.getElementById('mPartnerBtn').classList.toggle('active', m === 'partner');
+    document.getElementById('mOpponentBtn').classList.toggle('active', m === 'opponent');
+    updateUI();
+  }
+
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-'+id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ─────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────
+  function getTodayStr() { return new Date().toISOString().split('T')[0]; }
+  function pairKey(a, b) { return [a,b].sort().join('::'); }
+  function lineupKey4(names4) { return names4.slice().sort().join('::'); }
+
+  function hashStr(s) {
+    let h = 2166136261;
+    for (let i=0;i<s.length;i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+  function mulberry32(a) {
+    return function() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+  }
+
+  function combo4(arr) {
+    const out = [];
+    for (let i=0;i<arr.length;i++)
+      for (let j=i+1;j<arr.length;j++)
+        for (let k=j+1;k<arr.length;k++)
+          for (let l=k+1;l<arr.length;l++)
+            out.push([arr[i],arr[j],arr[k],arr[l]]);
+    return out;
+  }
+
+  function splitsOf4(p4) {
+    return [
+      { t1:[p4[0],p4[1]], t2:[p4[2],p4[3]] },
+      { t1:[p4[0],p4[2]], t2:[p4[1],p4[3]] },
+      { t1:[p4[0],p4[3]], t2:[p4[1],p4[2]] },
+    ];
+  }
+
+  // ─────────────────────────────────────────
+  // Skill helpers
+  // ─────────────────────────────────────────
+  function getEffectiveSkill(player) {
+    const MIN_GAMES_FOR_DYNAMIC = 20;
+    if (config.skillMode !== 'dynamic') return player.skill;
+    const pGames = matchHistory.filter(m => [...m.t1, ...m.t2].includes(player.name));
+    if (pGames.length < MIN_GAMES_FOR_DYNAMIC) return player.skill;
+    const wins = pGames.filter(m => (m.t1.includes(player.name) && m.s1 > m.s2) || (m.t2.includes(player.name) && m.s2 > m.s1)).length;
+    const winRate = wins / pGames.length;
+    return Math.max(1, Math.min(10, Math.round(1 + 9 * winRate)));
+  }
+
+  function getSkillModeInfo() {
+    if (config.skillMode !== 'dynamic') return '';
+    const MIN = 20;
+    const notReady = players.filter(p => matchHistory.filter(m => [...m.t1, ...m.t2].includes(p.name)).length < MIN);
+    if (notReady.length === 0) return '✅ All players have ≥20 games — dynamic skill active for everyone.';
+    const names = notReady.map(p => {
+      const g = matchHistory.filter(m => [...m.t1, ...m.t2].includes(p.name)).length;
+      return `${p.name} (${g}/${MIN})`;
+    }).join(', ');
+    return `⏳ Using manual skill for: ${names}`;
+  }
+
+  // ─────────────────────────────────────────
+  // History counts (today + decay for cross-day variety)
+  // ─────────────────────────────────────────
+  function buildDecayCounts(eventId=null, days=30) {
+    const now = Date.now();
+    const DAY = 24*60*60*1000;
+    const partner = {};
+    const opponent = {};
+    const matchup4 = {};
+
+    matchHistory.forEach(m => {
+      if (!m.time) return;
+      const mid = (m.eventId || 'def');
+      if (eventId && mid !== eventId) return;
+      const ageDays = (now - m.time) / DAY;
+      if (ageDays < 0 || ageDays > days) return;
+      const w = Math.exp(-ageDays / 10);
+
+      [m.t1, m.t2].forEach(team => {
+        if (team.length !== 2) return;
+        const k = pairKey(team[0], team[1]);
+        partner[k] = (partner[k] || 0) + w;
+      });
+
+      m.t1.forEach(a => m.t2.forEach(b => {
+        const k = pairKey(a, b);
+        opponent[k] = (opponent[k] || 0) + w;
+      }));
+
+      const k4 = lineupKey4([...m.t1, ...m.t2]);
+      matchup4[k4] = (matchup4[k4] || 0) + w;
     });
 
-    function save() { cloudDoc.set({ players, history, events, config }); }
-    function auth(pwd) { return prompt("Password:") === pwd; }
-    
-    function setMatrixMode(m) { 
-        matrixMode = m; 
-        document.getElementById('mPartnerBtn').classList.toggle('active', m==='partner');
-        document.getElementById('mOpponentBtn').classList.toggle('active', m==='opponent');
-        updateUI(); 
+    return { partner, opponent, matchup4 };
+  }
+
+  function buildTodayCounts(eventId=null, pool=null) {
+    const todayStr = getTodayStr();
+    const partner = {};
+    const opponent = {};
+    const matchup4 = {};
+
+    matchHistory.forEach(m => {
+      if (!m.time) return;
+      const isToday = new Date(m.time).toISOString().split('T')[0] === todayStr;
+      if (!isToday) return;
+      const mid = (m.eventId || 'def');
+      if (eventId && mid !== eventId) return;
+
+      if (pool) {
+        const names = new Set(pool.map(x => x.name));
+        const all = [...m.t1, ...m.t2];
+        if (!all.some(n => names.has(n))) return;
+      }
+
+      [m.t1, m.t2].forEach(team => {
+        if (team.length !== 2) return;
+        const k = pairKey(team[0], team[1]);
+        partner[k] = (partner[k] || 0) + 1;
+      });
+      m.t1.forEach(a => m.t2.forEach(b => {
+        const k = pairKey(a, b);
+        opponent[k] = (opponent[k] || 0) + 1;
+      }));
+      const k4 = lineupKey4([...m.t1, ...m.t2]);
+      matchup4[k4] = (matchup4[k4] || 0) + 1;
+    });
+
+    return { partner, opponent, matchup4 };
+  }
+
+  // ─────────────────────────────────────────
+  // Fairness (games since arrival today) + rest streak estimate
+  // ─────────────────────────────────────────
+  function gamesSinceArrivalToday(p) {
+    const todayStr = getTodayStr();
+    const arrival = p.arrivalTime || 0;
+    return matchHistory.filter(m => {
+      if (!m.time) return false;
+      const isToday = new Date(m.time).toISOString().split('T')[0] === todayStr;
+      if (!isToday) return false;
+      if (m.time < arrival) return false;
+      return [...m.t1, ...m.t2].includes(p.name);
+    }).length;
+  }
+
+  function computeRestStreak(pool) {
+    const todayStr = getTodayStr();
+    const todays = matchHistory
+      .filter(m => m.time && new Date(m.time).toISOString().split('T')[0] === todayStr)
+      .sort((a,b) => a.time - b.time);
+    const last = todays.length ? new Set([...todays[todays.length-1].t1, ...todays[todays.length-1].t2]) : new Set();
+    const prev = todays.length > 1 ? new Set([...todays[todays.length-2].t1, ...todays[todays.length-2].t2]) : new Set();
+
+    const streak = {};
+    pool.forEach(p => {
+      if ((p.arrivalTime || 0) > (todays.length ? todays[todays.length-1].time : 0)) {
+        streak[p.name] = 0;
+        return;
+      }
+      const r1 = last.size ? !last.has(p.name) : 0;
+      const r2 = prev.size ? !prev.has(p.name) : 0;
+      streak[p.name] = (r1 ? 1 : 0) + (r1 && r2 ? 1 : 0);
+    });
+    return streak;
+  }
+
+  // ─────────────────────────────────────────
+  // Lookahead planning engine (beam search)
+  // ─────────────────────────────────────────
+  function initState(pool, counts, restStreak, daySeed, todayCounts, decayCounts) {
+    const st = {
+      poolNames: pool.map(p=>p.name),
+      counts: { ...counts },
+      restStreak: { ...restStreak },
+      lastPlayed: {},
+      partnerToday: { ...todayCounts.partner },
+      opponentToday: { ...todayCounts.opponent },
+      matchup4Today: { ...todayCounts.matchup4 },
+      partnerDecay: { ...decayCounts.partner },
+      opponentDecay: { ...decayCounts.opponent },
+      matchup4Decay: { ...decayCounts.matchup4 },
+      gameIdx: 0,
+      seed: daySeed
+    };
+    pool.forEach(p => st.lastPlayed[p.name] = p.lastPlayed || 0);
+    return st;
+  }
+
+  function maxMinCounts(counts, names) {
+    let min = Infinity, max = -Infinity;
+    names.forEach(n => {
+      const c = counts[n] || 0;
+      if (c < min) min = c;
+      if (c > max) max = c;
+    });
+    return { min, max };
+  }
+
+  function applyMatch(state, match, playingNames) {
+    const newS = {
+      ...state,
+      counts: { ...state.counts },
+      restStreak: { ...state.restStreak },
+      lastPlayed: { ...state.lastPlayed },
+      partnerToday: { ...state.partnerToday },
+      opponentToday: { ...state.opponentToday },
+      matchup4Today: { ...state.matchup4Today },
+      partnerDecay: { ...state.partnerDecay },
+      opponentDecay: { ...state.opponentDecay },
+      matchup4Decay: { ...state.matchup4Decay },
+      gameIdx: state.gameIdx + 1,
+    };
+
+    const playingSet = new Set(playingNames);
+    const nowSim = Date.now() + newS.gameIdx * 1000;
+
+    newS.poolNames.forEach(n => {
+      if (playingSet.has(n)) {
+        newS.counts[n] = (newS.counts[n] || 0) + 1;
+        newS.restStreak[n] = 0;
+        newS.lastPlayed[n] = nowSim;
+      } else {
+        newS.restStreak[n] = (newS.restStreak[n] || 0) + 1;
+      }
+    });
+
+    const p1 = pairKey(match.t1[0].name, match.t1[1].name);
+    const p2 = pairKey(match.t2[0].name, match.t2[1].name);
+    newS.partnerToday[p1] = (newS.partnerToday[p1] || 0) + 1;
+    newS.partnerToday[p2] = (newS.partnerToday[p2] || 0) + 1;
+    newS.partnerDecay[p1] = (newS.partnerDecay[p1] || 0) + 0.25;
+    newS.partnerDecay[p2] = (newS.partnerDecay[p2] || 0) + 0.25;
+
+    match.t1.forEach(a => match.t2.forEach(b => {
+      const ok = pairKey(a.name, b.name);
+      newS.opponentToday[ok] = (newS.opponentToday[ok] || 0) + 1;
+      newS.opponentDecay[ok] = (newS.opponentDecay[ok] || 0) + 0.25;
+    }));
+
+    const k4 = lineupKey4(playingNames);
+    newS.matchup4Today[k4] = (newS.matchup4Today[k4] || 0) + 1;
+    newS.matchup4Decay[k4] = (newS.matchup4Decay[k4] || 0) + 0.25;
+
+    return newS;
+  }
+
+  function scoreMatch(state, match) {
+    const t1n = [match.t1[0].name, match.t1[1].name];
+    const t2n = [match.t2[0].name, match.t2[1].name];
+    const playing = [...t1n, ...t2n];
+
+    const p1k = pairKey(t1n[0], t1n[1]);
+    const p2k = pairKey(t2n[0], t2n[1]);
+
+    const partnerRep = (state.partnerToday[p1k] || 0) + (state.partnerToday[p2k] || 0);
+    const partnerRepDecay = (state.partnerDecay[p1k] || 0) + (state.partnerDecay[p2k] || 0);
+
+    let oppRep = 0;
+    let oppRepDecay = 0;
+    t1n.forEach(a => t2n.forEach(b => {
+      const ok = pairKey(a,b);
+      oppRep += (state.opponentToday[ok] || 0);
+      oppRepDecay += (state.opponentDecay[ok] || 0);
+    }));
+
+    const s1 = getEffectiveSkill(match.t1[0]) + getEffectiveSkill(match.t1[1]);
+    const s2 = getEffectiveSkill(match.t2[0]) + getEffectiveSkill(match.t2[1]);
+    const gap = Math.abs(s1 - s2);
+
+    let gapPenalty = 0;
+    if (gap > MAX_SKILL_GAP_SOFT) gapPenalty = 2_000_000;
+    else if (gap > MAX_SKILL_GAP) gapPenalty = 300_000;
+
+    // Hard fairness: max-min cannot exceed 1 after applying
+    const tmpCounts = { ...state.counts };
+    playing.forEach(n => tmpCounts[n] = (tmpCounts[n] || 0) + 1);
+    const mm = maxMinCounts(tmpCounts, state.poolNames);
+    if ((mm.max - mm.min) > 1) return { cost: 9e15, gap, reason:'fairness' };
+
+    // Rest: hard for N<=8, best-effort for N>=9
+    const N = state.poolNames.length;
+    const enforceRestHard = (N <= 8);
+    let restBad = 0;
+    state.poolNames.forEach(n => {
+      const isPlaying = playing.includes(n);
+      const rs = state.restStreak[n] || 0;
+      if (!isPlaying && rs >= 1) restBad += 1; // would become 2+
+    });
+    if (enforceRestHard && restBad > 0) return { cost: 9e14, gap, reason:'rest' };
+
+    const k4 = lineupKey4(playing);
+    const matchupRep = (state.matchup4Today[k4] || 0);
+    const matchupRepDecay = (state.matchup4Decay[k4] || 0);
+
+    const rnd = mulberry32(state.seed + state.gameIdx * 1013)();
+
+    const cost =
+      partnerRep * 15000 +
+      partnerRepDecay * 3000 +
+      matchupRep * 8000 +
+      matchupRepDecay * 1500 +
+      oppRep * 3000 +
+      oppRepDecay * 800 +
+      gap * 250 +
+      gapPenalty +
+      restBad * (N <= 8 ? 0 : 20000) +
+      rnd * 5;
+
+    return { cost, gap, reason:'ok' };
+  }
+
+  function pickCandidates(pool, baseCounts, baseLastPlayed) {
+    const names = pool.map(p=>p.name);
+    const mm = maxMinCounts(baseCounts, names);
+    const minC = mm.min;
+    let eligible = pool.filter(p => (baseCounts[p.name] || 0) <= minC + 1);
+    eligible.sort((a,b) => {
+      const ca = baseCounts[a.name] || 0;
+      const cb = baseCounts[b.name] || 0;
+      if (ca !== cb) return ca - cb;
+      return (baseLastPlayed[a.name] || 0) - (baseLastPlayed[b.name] || 0);
+    });
+    return eligible.slice(0, Math.min(10, eligible.length));
+  }
+
+  function chooseBestMatchLookahead(pool, state) {
+    const candidates = pickCandidates(pool, state.counts, state.lastPlayed);
+    if (candidates.length < 4) return null;
+
+    const firstActions = [];
+    combo4(candidates).forEach(p4 => {
+      splitsOf4(p4).forEach(sp => {
+        const sc = scoreMatch(state, sp);
+        if (sc.cost >= 9e14) return;
+        firstActions.push({ match: sp, sc });
+      });
+    });
+
+    if (firstActions.length === 0) {
+      // fallback: minimal gap among fairness-valid splits
+      let best = null;
+      combo4(candidates).forEach(p4 => {
+        splitsOf4(p4).forEach(sp => {
+          const playing = [...sp.t1, ...sp.t2].map(p=>p.name);
+          const tmpCounts = { ...state.counts };
+          playing.forEach(n => tmpCounts[n] = (tmpCounts[n] || 0) + 1);
+          const mm = maxMinCounts(tmpCounts, state.poolNames);
+          if ((mm.max - mm.min) > 1) return;
+          const gap = Math.abs((getEffectiveSkill(sp.t1[0])+getEffectiveSkill(sp.t1[1])) - (getEffectiveSkill(sp.t2[0])+getEffectiveSkill(sp.t2[1])));
+          if (!best || gap < best.gap) best = { match: sp, gap };
+        });
+      });
+      return best ? { ...best.match, gap: best.gap } : null;
     }
 
-    function switchTab(id, btn) { 
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); 
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
-        document.getElementById('tab-'+id).classList.add('active'); 
-        btn.classList.add('active'); 
-    }
+    let beam = [];
+    firstActions.forEach(a => {
+      const playing = [...a.match.t1, ...a.match.t2].map(p=>p.name);
+      const st2 = applyMatch(state, a.match, playing);
+      beam.push({ total: a.sc.cost, state: st2, first: a.match, firstGap: a.sc.gap });
+    });
+    beam.sort((x,y) => x.total - y.total);
+    beam = beam.slice(0, BEAM_WIDTH);
 
-    function updateUI() {
-        // Event Dropdowns
-        const ef = document.getElementById('rankEventFilter');
-        const rf = document.getElementById('resetEventSelect');
-        const curEf = ef.value; const curRf = rf.value;
-        const opts = events.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-        ef.innerHTML = '<option value="all">Lifetime History</option>' + opts;
-        rf.innerHTML = '<option value="">Select Event to Reset</option>' + opts;
-        ef.value = curEf || 'all'; rf.value = curRf || '';
-
-        const alertBox = document.getElementById('lastGameAlert');
-        if(history.length > 0) {
-            const lastMatch = history[history.length - 1];
-            const w1 = lastMatch.s1 >= lastMatch.s2;
-            alertBox.style.display = 'block';
-            alertBox.innerHTML = `🏁 <b>Last:</b> ${w1?lastMatch.s1:lastMatch.s2}-${w1?lastMatch.s2:lastMatch.s1} (${w1?lastMatch.t1.join("/"):lastMatch.t2.join("/")} beat ${w1?lastMatch.t2.join("/"):lastMatch.t1.join("/")})`;
-        } else { alertBox.style.display = 'none'; }
-
-        let st = {}; players.forEach(p => st[p.name] = {g:0, pts:0, w:0, l:0});
-        history.forEach(m => {
-            const diff = Math.abs(m.s1 - m.s2);
-            [...m.t1, ...m.t2].forEach(n => {
-                if(!st[n]) return; st[n].g++;
-                const isT1 = m.t1.includes(n);
-                const won = (isT1 && m.s1 > m.s2) || (!isT1 && m.s2 > m.s1);
-                if(won) { st[n].pts += config.winBonus + (diff * config.marginMult); st[n].w++; }
-                else { st[n].pts -= (diff * (config.loseDeduct || 0)); st[n].l++; }
-            });
-        });
-
-        const sorted = Object.keys(st).map(n => ({name:n, ...st[n]})).sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
-        const top3Names = sorted.filter(x => x.pts > 0).slice(0,3).map(x => x.name);
-
-        document.getElementById('selectionListContainer').innerHTML = players.filter(p => p.present)
-            .sort((a,b) => sorted.findIndex(x => x.name===a.name) - sorted.findIndex(x => x.name===b.name))
-            .map(p => {
-                const r = top3Names.indexOf(p.name) + 1;
-                const t = selections[p.name];
-                return `<div class="selection-grid ${t==1?'t1-active':t==2?'t2-active':''}">
-                    <div class="player-name-cell">${r>0?`<span class="badge badge-${r}">${r}</span>`:`<span class="badge-placeholder"></span>`} <b>${p.name.substring(0,10)}</b></div>
-                    <button class="t-btn t-btn-1" onclick="selectTeam('${p.name}', 1)">T1</button>
-                    <button class="t-btn t-btn-2" onclick="selectTeam('${p.name}', 2)">T2</button>
-                </div>`;
-            }).join('');
-
-        document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
-        document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
-
-        // Matrix
-        let mData = {}; players.forEach(p1 => { mData[p1.name] = {}; players.forEach(p2 => mData[p1.name][p2.name] = 0); });
-        history.forEach(m => {
-            if(matrixMode === 'partner') { [m.t1, m.t2].forEach(team => { if(team.length===2) { mData[team[0]][team[1]]++; mData[team[1]][team[0]]++; } }); }
-            else { m.t1.forEach(p1 => m.t2.forEach(p2 => { mData[p1][p2]++; mData[p2][p1]++; })); }
-        });
-        let mHtml = `<tr><th></th>${players.map(p => `<th>${p.name.substring(0,3)}</th>`).join('')}</tr>`;
-        players.forEach(p1 => {
-            mHtml += `<tr><td style="text-align:left"><b>${p1.name}</b></td>`;
-            players.forEach(p2 => mHtml += `<td>${p1.name===p2.name?'-':mData[p1.name][p2.name]}</td>`);
-            mHtml += `</tr>`;
-        });
-        document.getElementById('matrixTable').innerHTML = mHtml;
-
-        let ps = {}; history.forEach(m => { [ {t:m.t1, s:m.s1, o:m.s2}, {t:m.t2, s:m.s2, o:m.s1} ].forEach(x => { const k = x.t.sort().join(" & "); if(!ps[k]) ps[k] = {g:0, w:0, l:0}; ps[k].g++; if(x.s > x.o) ps[k].w++; else ps[k].l++; }); });
-        const sPairs = Object.keys(ps).map(k => ({n:k, ...ps[k]})).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
-        document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
-        document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`).join('');
-        document.getElementById('eventAdminList').innerHTML = events.map(e => `<div class="single-row"><span>${e.name} <small>(${e.active?'Active':'Closed'})</small></span><button class="btn-outline" onclick="toggleEvent('${e.id}')">${e.active?'Close':'Open'}</button></div>`).join('');
-        document.getElementById('rosterList').innerHTML = players.sort((a,b)=>a.name.localeCompare(b.name)).map(p => `<div class="single-row"><span><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b></span><div><input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px;"><button class="btn-outline" onclick="deletePlayer('${p.name}')">🗑️</button></div></div>`).join('');
-        document.getElementById('historyList').innerHTML = [...history].reverse().map(m => { 
-            const w1 = m.s1 >= m.s2; 
-            const d = m.time ? new Date(m.time).toLocaleString([], {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
-            return `<div class="single-row"><div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small><span class="hist-date">${d}</span></div><div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button><button class="btn-outline" style="color:red" onclick="deleteMatch(${m.id})">X</button></div></div>`; 
-        }).join('');
-    }
-
-    function clearTournamentRecords() {
-        const resetId = document.getElementById('resetEventSelect').value;
-        const resetName = events.find(e => e.id === resetId)?.name;
-        if(!resetId) return alert("Select an event from the dropdown to reset.");
-        if(auth(SUPER_PWD)) {
-            if(confirm(`⚠️ Reset "${resetName}"? matches and queue will be wiped.`)) {
-                history = history.filter(m => m.eventId !== resetId);
-                players.forEach(p => p.lastPlayed = 0);
-                save();
-                alert("Event data cleared.");
-            }
+    for (let d=1; d<LOOKAHEAD_DEPTH; d++) {
+      let nextBeam = [];
+      beam.forEach(node => {
+        const cand2 = pickCandidates(pool, node.state.counts, node.state.lastPlayed);
+        if (cand2.length < 4) {
+          nextBeam.push(node);
+          return;
         }
+        combo4(cand2).forEach(p4 => {
+          splitsOf4(p4).forEach(sp => {
+            const sc = scoreMatch(node.state, sp);
+            if (sc.cost >= 9e14) return;
+            const playing = [...sp.t1, ...sp.t2].map(p=>p.name);
+            const st3 = applyMatch(node.state, sp, playing);
+            nextBeam.push({ total: node.total + sc.cost, state: st3, first: node.first, firstGap: node.firstGap });
+          });
+        });
+      });
+      nextBeam.sort((x,y) => x.total - y.total);
+      beam = nextBeam.slice(0, BEAM_WIDTH);
+      if (beam.length === 0) break;
     }
 
-    function addPlayer() { const n = document.getElementById('newName'); if(n.value){ players.push({name:n.value.trim(), skill:parseInt(document.getElementById('newSkill').value), present:false, lastPlayed:0}); n.value=''; save(); } }
-    function selectTeam(n, t) { if(selections[n]===t) delete selections[n]; else { if(Object.values(selections).filter(v=>v===t).length>=2) return; selections[n]=t; } updateUI(); }
-    function togglePresence(n) { players.find(x=>x.name===n).present = !players.find(x=>x.name===n).present; save(); }
-    function addEvent() { if(!auth(ADMIN_PWD)) return; const n = document.getElementById('newEventName').value.trim(); if(n) { events.forEach(e => e.active = false); events.push({id:'ev_'+Date.now(), name:n, active:true}); save(); } }
-    function toggleEvent(id) { if(!auth(ADMIN_PWD)) return; const ev = events.find(e => e.id === id); ev.active = !ev.active; save(); }
-    function recordMatch() { 
-        const activeEv = events.find(e => e.active);
-        const t1 = Object.keys(selections).filter(n => selections[n] === 1); 
-        const t2 = Object.keys(selections).filter(n => selections[n] === 2); 
-        const s1 = parseInt(document.getElementById('s1').value); 
-        const s2 = parseInt(document.getElementById('s2').value); 
-        if(t1.length < 2 || isNaN(s1)) return alert("Select teams and scores!"); 
-        const now = Date.now();
-        history.push({ t1, t2, s1, s2, id: now, time: now, eventId: activeEv ? activeEv.id : 'def' }); 
-        [...t1, ...t2].forEach(n => players.find(x=>x.name===n).lastPlayed = now);
-        selections = {}; document.getElementById('s1').value=''; document.getElementById('s2').value=''; 
-        save(); 
+    beam.sort((x,y) => x.total - y.total);
+    const best = beam[0];
+    return { ...best.first, gap: best.firstGap };
+  }
+
+  // ─────────────────────────────────────────
+  // UI render
+  // ─────────────────────────────────────────
+  function updateUI() {
+    const ef = document.getElementById('rankEventFilter');
+    const rf = document.getElementById('resetEventSelect');
+    const curEf = ef.value;
+    const curRf = rf.value;
+
+    const opts = events.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    ef.innerHTML = '<option value="all">Lifetime History</option>' + opts;
+    rf.innerHTML = '<option value="">Select Event to Reset</option>' + opts;
+    ef.value = curEf || 'all';
+    rf.value = curRf || '';
+
+    const alertBox = document.getElementById('lastGameAlert');
+    if (matchHistory.length > 0) {
+      const lastMatch = matchHistory[matchHistory.length - 1];
+      const w1 = lastMatch.s1 > lastMatch.s2;
+      alertBox.style.display = 'block';
+      alertBox.innerHTML = `🏁 <b>Last:</b> ${w1?lastMatch.s1:lastMatch.s2}-${w1?lastMatch.s2:lastMatch.s1} (${w1?lastMatch.t1.join("/"):lastMatch.t2.join("/")} beat ${w1?lastMatch.t2.join("/"):lastMatch.t1.join("/")})`;
+    } else {
+      alertBox.style.display = 'none';
     }
-    function updateSettings() { if(!auth(ADMIN_PWD)) return; config.winBonus = parseFloat(document.getElementById('winBonus').value); config.marginMult = parseFloat(document.getElementById('marginMult').value); config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value); save(); alert("Rules Saved"); }
-    function deletePlayer(n) { if(confirm("Delete?")) { players=players.filter(x=>x.name!==n); save(); } }
-    function updateSkill(n,v) { players.find(x=>x.name===n).skill = parseInt(v); save(); }
-    function deleteMatch(id) { if(auth(SUPER_PWD)) { history = history.filter(m => m.id !== id); save(); } }
-    function editMatch(id) { if(!auth(SUPER_PWD)) return; let m = history.find(x => x.id === id); let ns1 = prompt("T1 Score:", m.s1); let ns2 = prompt("T2 Score:", m.s2); if(ns1 !== null) { m.s1 = parseInt(ns1); m.s2 = parseInt(ns2); save(); } }
-    function suggestTeams() { let pool = players.filter(p=>p.present).sort((a,b)=>a.lastPlayed-b.lastPlayed).slice(0,4); if(pool.length<4) return alert("Check in 4 players first!"); pool.sort((a,b)=>a.skill-b.skill); selections={}; selections[pool[0].name]=1; selections[pool[3].name]=1; selections[pool[1].name]=2; selections[pool[2].name]=2; updateUI(); }
+
+    const selectedEventId = ef.value;
+    const filteredHistory = selectedEventId === 'all'
+      ? matchHistory
+      : matchHistory.filter(m => m.eventId === selectedEventId);
+
+    let st = {};
+    players.forEach(p => st[p.name] = { g:0, pts:0, w:0, l:0 });
+
+    filteredHistory.forEach(m => {
+      const diff = Math.abs(m.s1 - m.s2);
+      [...m.t1, ...m.t2].forEach(n => {
+        if (!st[n]) return;
+        st[n].g++;
+        const isT1 = m.t1.includes(n);
+        const won = (isT1 && m.s1 > m.s2) || (!isT1 && m.s2 > m.s1);
+        if (won) { st[n].pts += config.winBonus + (diff * config.marginMult); st[n].w++; }
+        else { st[n].pts -= (diff * (config.loseDeduct || 0)); st[n].l++; }
+      });
+    });
+
+    const sorted = Object.keys(st)
+      .map(n => ({ name:n, ...st[n] }))
+      .sort((a,b) => (b.pts/(b.g||1)) - (a.pts/(a.g||1)));
+
+    const top3Names = sorted.filter(x => x.pts > 0).slice(0,3).map(x => x.name);
+
+    // today game counts for present
+    const todayCounts = {};
+    players.filter(p => p.present).forEach(p => todayCounts[p.name] = gamesSinceArrivalToday(p));
+    const present = players.filter(p => p.present);
+    const minCount = present.length ? Math.min(...present.map(p => todayCounts[p.name] || 0)) : 0;
+
+    document.getElementById('selectionListContainer').innerHTML = present
+      .sort((a,b) => sorted.findIndex(x => x.name===a.name) - sorted.findIndex(x => x.name===b.name))
+      .map(p => {
+        const r = top3Names.indexOf(p.name) + 1;
+        const t = selections[p.name];
+        const gc = todayCounts[p.name] || 0;
+        const isLow = gc === minCount;
+        return `<div class="selection-grid ${t==1?'t1-active':t==2?'t2-active':''}">
+          <div class="player-name-cell">${r>0?`<span class="badge badge-${r}">${r}</span>`:`<span class="badge-placeholder"></span>`} <b>${p.name.substring(0,10)}</b><span class="game-count-chip${isLow?' low':''}">🎮${gc}</span></div>
+          <button class="t-btn t-btn-1" onclick="selectTeam('${p.name}', 1)">T1</button>
+          <button class="t-btn t-btn-2" onclick="selectTeam('${p.name}', 2)">T2</button>
+        </div>`;
+      }).join('');
+
+    document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
+    document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
+
+    // Matrix
+    let mData = {};
+    players.forEach(p1 => { mData[p1.name] = {}; players.forEach(p2 => mData[p1.name][p2.name] = 0); });
+    matchHistory.forEach(m => {
+      if (matrixMode === 'partner') {
+        [m.t1, m.t2].forEach(team => {
+          if (team.length === 2) { mData[team[0]][team[1]]++; mData[team[1]][team[0]]++; }
+        });
+      } else {
+        m.t1.forEach(p1 => m.t2.forEach(p2 => { mData[p1][p2]++; mData[p2][p1]++; }));
+      }
+    });
+    let mHtml = `<tr><th></th>${players.map(p => `<th>${p.name.substring(0,3)}</th>`).join('')}</tr>`;
+    players.forEach(p1 => {
+      mHtml += `<tr><td style="text-align:left"><b>${p1.name}</b></td>`;
+      players.forEach(p2 => mHtml += `<td>${p1.name===p2.name?'-':mData[p1.name][p2.name]}</td>`);
+      mHtml += `</tr>`;
+    });
+    document.getElementById('matrixTable').innerHTML = mHtml;
+
+    // dominant pairs
+    let ps = {};
+    matchHistory.forEach(m => {
+      [ {t:m.t1, s:m.s1, o:m.s2}, {t:m.t2, s:m.s2, o:m.s1} ].forEach(x => {
+        const k = x.t.slice().sort().join(" & ");
+        if(!ps[k]) ps[k] = {g:0, w:0, l:0};
+        ps[k].g++;
+        if (x.s > x.o) ps[k].w++; else ps[k].l++;
+      });
+    });
+    const sPairs = Object.keys(ps).map(k => ({ n:k, ...ps[k] })).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
+    document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
+
+    document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) =>
+      `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g}</td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`
+    ).join('');
+
+    // roster
+    document.getElementById('rosterList').innerHTML = players
+      .slice().sort((a,b) => a.name.localeCompare(b.name))
+      .map(p => {
+        const eff = getEffectiveSkill(p);
+        const isDynamic = config.skillMode === 'dynamic' && eff !== p.skill;
+        const skillLabel = isDynamic
+          ? `<span title="Dynamic skill (${p.skill} manual → ${eff} dynamic)" style="color:var(--fb-blue)">⚡${eff}</span>`
+          : `<input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px;">`;
+        return `<div class="single-row"><span><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b></span>
+          <div style="display:flex;align-items:center;gap:4px;">${skillLabel}<button class="btn-outline" onclick="deletePlayer('${p.name}')">🗑️</button></div></div>`;
+      }).join('');
+
+    // history
+    document.getElementById('historyList').innerHTML = [...matchHistory].reverse().map(m => {
+      const w1 = m.s1 > m.s2;
+      const d = m.time ? new Date(m.time).toLocaleString([], {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
+      return `<div class="single-row"><div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small><span class="hist-date">${d}</span></div>
+        <div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button><button class="btn-outline" style="color:red" onclick="deleteMatch(${m.id})">X</button></div></div>`;
+    }).join('');
+
+    const sm = document.getElementById('skillModeSelect');
+    if (sm) sm.value = config.skillMode || 'manual';
+    const smi = document.getElementById('skillModeInfo');
+    if (smi) smi.textContent = getSkillModeInfo();
+  }
+
+  // ─────────────────────────────────────────
+  // CRUD & gameplay
+  // ─────────────────────────────────────────
+  function addPlayer() {
+    const n = document.getElementById('newName');
+    if (n.value) {
+      players.push({ name:n.value.trim(), skill:parseInt(document.getElementById('newSkill').value), present:false, lastPlayed:0, arrivalTime:0 });
+      n.value = '';
+      save();
+    }
+  }
+
+  function selectTeam(n, t) {
+    if (selections[n] === t) delete selections[n];
+    else {
+      if (Object.values(selections).filter(v=>v===t).length >= 2) return;
+      selections[n] = t;
+    }
+    updateUI();
+  }
+
+  function togglePresence(n) {
+    let p = players.find(x => x.name === n);
+    p.present = !p.present;
+    if (p.present) p.arrivalTime = Date.now();
+    else p.arrivalTime = 0;
+    save();
+  }
+
+  function recordMatch() {
+    const activeEv = events.find(e => e.active);
+    const t1 = Object.keys(selections).filter(n => selections[n] === 1);
+    const t2 = Object.keys(selections).filter(n => selections[n] === 2);
+    const s1 = parseInt(document.getElementById('s1').value);
+    const s2 = parseInt(document.getElementById('s2').value);
+
+    if (t1.length < 2) return alert("Select 2 players for Team 1!");
+    if (t2.length < 2) return alert("Select 2 players for Team 2!");
+    if (isNaN(s1) || isNaN(s2)) return alert("Enter scores for both teams!");
+    if (s1 === s2) return alert("Scores cannot be equal — no ties in badminton!");
+
+    if (!confirm(`Submit: ${t1.join("/")} ${s1} - ${s2} ${t2.join("/")}?`)) return;
+
+    const now = Date.now();
+    matchHistory.push({ t1, t2, s1, s2, id: now, time: now, eventId: activeEv ? activeEv.id : 'def' });
+    [...t1, ...t2].forEach(n => {
+      const pl = players.find(x => x.name === n);
+      if (pl) pl.lastPlayed = now;
+    });
+
+    selections = {};
+    document.getElementById('s1').value = '';
+    document.getElementById('s2').value = '';
+    save();
+  }
+
+  function updateSettings() {
+    if (!auth(ADMIN_PWD)) return;
+    config.winBonus = parseFloat(document.getElementById('winBonus').value);
+    config.marginMult = parseFloat(document.getElementById('marginMult').value);
+    config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value);
+    config.skillMode = document.getElementById('skillModeSelect').value;
+    if (save()) alert("Rules Saved");
+  }
+
+  function deletePlayer(n) { if (confirm("Delete?")) { players = players.filter(x => x.name !== n); save(); } }
+  function updateSkill(n,v) { players.find(x => x.name===n).skill = parseInt(v); save(); }
+  function deleteMatch(id) { if (auth(SUPER_PWD)) { matchHistory = matchHistory.filter(m => m.id !== id); save(); } }
+  function editMatch(id) {
+    if (!auth(SUPER_PWD)) return;
+    let m = matchHistory.find(x => x.id === id);
+    let ns1 = prompt("T1 Score:", m.s1);
+    let ns2 = prompt("T2 Score:", m.s2);
+    if (ns1 !== null) { m.s1 = parseInt(ns1); m.s2 = parseInt(ns2); save(); }
+  }
+
+  // ─────────────────────────────────────────
+  // Auto Pair (lookahead)
+  // ─────────────────────────────────────────
+  function suggestTeams() {
+    let pool = players.filter(p => p.present);
+    if (pool.length < 4) return alert("Check in at least 4 players first!");
+
+    const activeEv = events.find(e => e.active);
+    const activeEventId = activeEv ? activeEv.id : 'def';
+
+    let counts = {};
+    pool.forEach(p => counts[p.name] = gamesSinceArrivalToday(p));
+    let restStreak = computeRestStreak(pool);
+
+    const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
+    const todayC = buildTodayCounts(activeEventId, pool);
+    const decayC = buildDecayCounts(activeEventId, 30);
+
+    const st = initState(pool, counts, restStreak, daySeed, todayC, decayC);
+    const best = chooseBestMatchLookahead(pool, st);
+    if (!best) return alert("No suitable pairing found (constraints too tight). Try adjusting skill ratings or ensure more players are present.");
+
+    selections = {};
+    best.t1.forEach(pp => selections[pp.name] = 1);
+    best.t2.forEach(pp => selections[pp.name] = 2);
+    updateUI();
+
+    updateNextUpPreview(pool, counts, restStreak, activeEventId);
+  }
+
+  function updateNextUpPreview(pool, counts, restStreak, activeEventId) {
+    const playingNow = Object.keys(selections);
+    if (playingNow.length !== 4) {
+      document.getElementById('nextUpContainer').style.display = 'none';
+      return;
+    }
+
+    const todayC = buildTodayCounts(activeEventId, pool);
+    const decayC = buildDecayCounts(activeEventId, 30);
+    const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
+
+    const st = initState(pool, counts, restStreak, daySeed, todayC, decayC);
+
+    const t1n = Object.keys(selections).filter(n => selections[n]===1);
+    const t2n = Object.keys(selections).filter(n => selections[n]===2);
+    const t1 = t1n.map(n => pool.find(p=>p.name===n)).filter(Boolean);
+    const t2 = t2n.map(n => pool.find(p=>p.name===n)).filter(Boolean);
+    if (t1.length !== 2 || t2.length !== 2) {
+      document.getElementById('nextUpContainer').style.display = 'none';
+      return;
+    }
+
+    const curMatch = { t1, t2 };
+    const st2 = applyMatch(st, curMatch, playingNow);
+
+    const next = chooseBestMatchLookahead(pool, st2);
+    if (!next) {
+      document.getElementById('nextUpContainer').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('nextUpContainer').style.display = 'block';
+    document.getElementById('nextUpNames').innerHTML =
+      `<span class="next-team-1">${next.t1.map(p=>p.name).join(" & ")}</span>
+       <span style="color:#999; font-size:10px;">vs</span>
+       <span class="next-team-2">${next.t2.map(p=>p.name).join(" & ")}</span>`;
+  }
+
+  // ─────────────────────────────────────────
+  // Day Plan (lookahead) + NEW totals display
+  // ─────────────────────────────────────────
+  function generateFullDayPlan() {
+    let pool = players.filter(p => p.present);
+    if (pool.length < 4) return alert("Need 4 players present!");
+
+    let numGames = parseInt(document.getElementById('planGameCount').value) || 10;
+    const activeEv = events.find(e => e.active);
+    const activeEventId = activeEv ? activeEv.id : 'def';
+
+    // starting counts (today history)
+    let startCounts = {};
+    pool.forEach(p => startCounts[p.name] = gamesSinceArrivalToday(p));
+    let restStreak = computeRestStreak(pool);
+
+    const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
+    const todayC = buildTodayCounts(activeEventId, pool);
+    const decayC = buildDecayCounts(activeEventId, 30);
+
+    let st = initState(pool, startCounts, restStreak, daySeed, todayC, decayC);
+
+    let html = '';
+    for (let g=1; g<=numGames; g++) {
+      const best = chooseBestMatchLookahead(pool, st);
+      if (!best) break;
+
+      const playing = [...best.t1, ...best.t2].map(p=>p.name);
+      const gap = best.gap !== undefined ? best.gap : Math.abs((getEffectiveSkill(best.t1[0])+getEffectiveSkill(best.t1[1])) - (getEffectiveSkill(best.t2[0])+getEffectiveSkill(best.t2[1])));
+
+      html += `<div class="single-row" style="flex-direction:column; align-items:flex-start; gap:2px;">
+        <div style="display:flex; justify-content:space-between; width:100%">
+          <span style="font-size:9px; color:var(--fb-blue); font-weight:bold;">GAME ${g}</span>
+          <span style="font-size:8px; color:#999;">Skill gap: ${gap}</span>
+        </div>
+        <div style="font-size:12px;"><span style="color:var(--fb-blue); font-weight:bold">${best.t1.map(pp=>pp.name).join("&")}</span> <b style="color:#999">vs</b> <span style="color:var(--fb-red); font-weight:bold">${best.t2.map(pp=>pp.name).join("&")}</span></div>
+      </div>`;
+
+      st = applyMatch(st, best, playing);
+    }
+
+    document.getElementById('schedulePlanList').innerHTML = html;
+
+    // NEW: totals per player (today history + planned games)
+    const totals = st.counts;
+    const names = pool.map(p => p.name).slice().sort((a,b) => a.localeCompare(b));
+
+    let minT = Infinity, maxT = -Infinity;
+    names.forEach(n => {
+      const v = totals[n] || 0;
+      if (v < minT) minT = v;
+      if (v > maxT) maxT = v;
+    });
+
+    const chips = names.map(n => {
+      const total = totals[n] || 0;
+      const already = startCounts[n] || 0;
+      const add = Math.max(0, total - already);
+      return `<span class="plan-chip"><b>${n}</b> <span>${total}</span> <span class="delta">(+${add})</span></span>`;
+    }).join('');
+
+    const summary = `<div class="plan-summary">Totals include today's played games (since arrival) + this plan. Range: <b>${minT}</b> to <b>${maxT}</b>.</div>`;
+
+    document.getElementById('planTotals').innerHTML = `<div style="font-size:10px; font-weight:bold; color:#333; margin-top:4px;">📌 Total games per player (today + plan)</div><div class="plan-totals-wrap">${chips}</div>${summary}`;
+  }
+
+  // ─────────────────────────────────────────
+  // Reset history (FIXED):
+  // ─────────────────────────────────────────
+
+// ✅ FIXED — SAME LOGIC AS OLD WORKING badminton.html
+	function clearTournamentRecords() {
+	  const resetId = document.getElementById('resetEventSelect').value;
+	  if (!resetId) {
+		alert("Select an event from the dropdown to reset.");
+		return;
+	  }
+
+	  const ev = events.find(e => e.id === resetId);
+	  if (!ev) {
+		alert("Event not found.");
+		return;
+	  }
+
+	  // IMPORTANT: use SUPER_PWD (same as old file)
+	  if (!auth(SUPER_PWD)) return;
+
+	  if (confirm(`⚠️ Reset "${ev.name}"?\nAll matches for this event will be deleted.`)) {
+
+		// ✅ STRICT eventId filter — THIS IS THE KEY
+		matchHistory = matchHistory.filter(m => m.eventId !== resetId);
+
+		// same behavior as old working version
+		players.forEach(p => p.lastPlayed = 0);
+
+		save();        // overwrite Firestore
+		updateUI();    // refresh UI
+
+		alert("Event data cleared.");
+	  }
+	}
+
+
 </script>
 </body>
 </html>
