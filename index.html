@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Fit Boys Badminton League</title>
+  <title>Fit Boys Pro Master</title>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
   <style>
@@ -43,6 +43,14 @@
     .game-count-chip { font-size: 9px; color: #888; background: #f0f2f5; border-radius: 10px; padding: 1px 5px; margin-left: auto; margin-right: 4px; white-space: nowrap; }
     .game-count-chip.low { color: var(--fb-green); font-weight: bold; }
     .next-team-1 { color: var(--fb-blue); } .next-team-2 { color: var(--fb-red); }
+    .locked-game-banner { background:#fff3cd; border:1px solid #ffc107; border-radius:10px; padding:8px 10px; margin-bottom:6px; font-size:12px; }
+    .locked-game-banner .locked-title { font-size:9px; color:#856404; font-weight:bold; text-transform:uppercase; margin-bottom:3px; }
+    .locked-game-banner .locked-teams { font-weight:bold; }
+    .locked-game-banner .unlock-btn { float:right; font-size:10px; padding:3px 8px; background:white; color:var(--fb-red); border:1px solid var(--fb-red); border-radius:6px; cursor:pointer; font-weight:bold; }
+    .player-locked { opacity:0.4; pointer-events:none; }
+    .player-locked .player-name-cell { background:#f5f5f5 !important; border-color:#ddd !important; }
+    .lock-btn { background:white; color:#856404; border:1px solid #ffc107; font-size:10px; padding:4px 8px; border-radius:8px; font-weight:bold; cursor:pointer; margin-left:4px; }
+    .lock-btn:disabled { opacity:0.35; cursor:default; }
 
     /* Plan totals (mobile friendly chips) */
     .plan-totals-wrap { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px 0; }
@@ -53,14 +61,24 @@
   </style>
 </head>
 <body>
-  <div class="header">🏸 Fit Boys Badminton League</div>
+  <div class="header">🏸 Fit Boys Pro Master</div>
 
   <div class="container">
     <div id="tab-play" class="tab-content active">
       <div id="lastGameAlert" class="last-game-box" style="display:none;"></div>
 
       <div class="card" style="padding:6px;">
-        <h3>Match Maker <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button></h3>
+        <h3>Match Maker
+          <div style="display:flex;gap:4px;align-items:center;">
+            <button class="btn-outline" onclick="suggestTeams()">Auto-Pair</button>
+            <button class="lock-btn" id="lockBtn" onclick="lockCurrentGame()" disabled title="Select 4 players first, then lock">🔒 Lock</button>
+          </div>
+        </h3>
+        <div id="lockedGameBanner" style="display:none;" class="locked-game-banner">
+          <button class="unlock-btn" onclick="unlockGame()">✕ Unlock</button>
+          <div class="locked-title">🔒 Game In Progress (locked)</div>
+          <div class="locked-teams" id="lockedGameTeams"></div>
+        </div>
 
         <div id="nextUpContainer" style="margin-top: 8px; padding: 6px; background: #f0f7ff; border: 1px dashed var(--fb-blue); border-radius: 10px; display: none;">
           <div style="font-size: 9px; color: var(--fb-blue); font-weight: bold; margin-bottom: 2px; text-transform: uppercase;">🕒 On Deck (Next Game)</div>
@@ -256,6 +274,7 @@
           events = d.events || events;
           if (d.config) {
             config = d.config;
+            if (config.lockedGame === undefined) config.lockedGame = null;
             document.getElementById('winBonus').value = config.winBonus;
             document.getElementById('marginMult').value = config.marginMult;
             document.getElementById('loseDeduct').value = config.loseDeduct;
@@ -278,7 +297,7 @@
   let players = [];
   let matchHistory = [];
   let events = [{ id:'def', name:'Regular', active:true }];
-  let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1, skillMode: 'manual' };
+  let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1, skillMode: 'manual', lockedGame: null };
   let selections = {};
   let matrixMode = 'partner';
 // Last generated plan cache (for Copy button)
@@ -785,22 +804,67 @@ let lastPlanStartCounts = {};
     const present = players.filter(p => p.present);
     const minCount = present.length ? Math.min(...present.map(p => todayCounts[p.name] || 0)) : 0;
 
+    const lockedNames = new Set([
+      ...(config.lockedGame ? config.lockedGame.t1 : []),
+      ...(config.lockedGame ? config.lockedGame.t2 : [])
+    ]);
+
     document.getElementById('selectionListContainer').innerHTML = present
       .sort((a,b) => sorted.findIndex(x => x.name===a.name) - sorted.findIndex(x => x.name===b.name))
       .map(p => {
         const r = top3Names.indexOf(p.name) + 1;
         const t = selections[p.name];
         const gc = todayCounts[p.name] || 0;
-        const isLow = gc === minCount;
-        return `<div class="selection-grid ${t==1?'t1-active':t==2?'t2-active':''}">
-          <div class="player-name-cell">${r>0?`<span class="badge badge-${r}">${r}</span>`:`<span class="badge-placeholder"></span>`} <b>${p.name.substring(0,10)}</b><span class="game-count-chip${isLow?' low':''}">🎮${gc}</span></div>
+        const isLow = gc === minCount && !lockedNames.has(p.name);
+        const isLocked = lockedNames.has(p.name);
+        return `<div class="selection-grid ${isLocked?'player-locked':''} ${t==1?'t1-active':t==2?'t2-active':''}">
+          <div class="player-name-cell">${r>0?`<span class="badge badge-${r}">${r}</span>`:`<span class="badge-placeholder"></span>`} <b>${p.name.substring(0,10)}</b>${isLocked?'<span style="font-size:9px;color:#856404;margin-left:auto;margin-right:4px;">🔒playing</span>':`<span class="game-count-chip${isLow?' low':''}">🎮${gc}</span>`}</div>
           <button class="t-btn t-btn-1" onclick="selectTeam('${p.name}', 1)">T1</button>
           <button class="t-btn t-btn-2" onclick="selectTeam('${p.name}', 2)">T2</button>
         </div>`;
       }).join('');
 
-    document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
-    document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
+    // Locked game banner
+    const lBanner = document.getElementById('lockedGameBanner');
+    const lTeams = document.getElementById('lockedGameTeams');
+    if (config.lockedGame && lBanner && lTeams) {
+      lBanner.style.display = 'block';
+      lTeams.innerHTML = `<span style="color:var(--fb-blue)">${config.lockedGame.t1.join(' & ')}</span> <span style="color:#999">vs</span> <span style="color:var(--fb-red)">${config.lockedGame.t2.join(' & ')}</span>`;
+    } else if (lBanner) {
+      lBanner.style.display = 'none';
+    }
+
+    // Lock button: enable only when exactly 4 non-locked players are selected
+    const lockBtn = document.getElementById('lockBtn');
+    if (lockBtn) {
+      const sel4 = Object.keys(selections).filter(n => !lockedNames.has(n));
+      const t1sel = sel4.filter(n => selections[n]===1);
+      const t2sel = sel4.filter(n => selections[n]===2);
+      lockBtn.disabled = !(t1sel.length===2 && t2sel.length===2) || !!config.lockedGame;
+    }
+
+	// Update Auto-Pair button state based on lockedGame status
+    const autoPairBtn = document.querySelector('button[onclick="suggestTeams()"]');
+    const isGameLocked = !!config.lockedGame;
+
+    if (autoPairBtn) {
+      autoPairBtn.disabled = isGameLocked;
+      autoPairBtn.style.opacity = isGameLocked ? "0.5" : "1";
+      autoPairBtn.style.cursor = isGameLocked ? "not-allowed" : "pointer";
+      autoPairBtn.innerText = isGameLocked ? "🔒 Locked" : "Auto-Pair";
+    }
+
+
+    //document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
+    //document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
+	// FIX: Show locked names if a game is locked, otherwise show current selections
+    if (config.lockedGame) {
+      document.getElementById('t1Names').innerText = config.lockedGame.t1.join(" & ");
+      document.getElementById('t2Names').innerText = config.lockedGame.t2.join(" & ");
+    } else {
+      document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
+      document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
+    }
 
     // Matrix
     let mData = {};
@@ -895,10 +959,42 @@ let lastPlanStartCounts = {};
     save();
   }
 
-  function recordMatch() {
-    const activeEv = events.find(e => e.active);
+  // ─────────────────────────────────────────
+  // Locked game management
+  // ─────────────────────────────────────────
+  function lockCurrentGame() {
     const t1 = Object.keys(selections).filter(n => selections[n] === 1);
     const t2 = Object.keys(selections).filter(n => selections[n] === 2);
+    if (t1.length !== 2 || t2.length !== 2) return alert("Select exactly 2 players for each team first.");
+    if (!confirm(`Lock game in progress?\n${t1.join(' & ')} vs ${t2.join(' & ')}\n\nThis lets you regenerate the plan for remaining players while this game finishes.`)) return;
+    config.lockedGame = { t1, t2, lockedAt: Date.now() };
+    // Clear selections — locked players move to the banner, freeing the UI for the next game
+    selections = {};
+    save();
+  }
+
+  function unlockGame() {
+    if (!config.lockedGame) return;
+    if (!confirm("Unlock the in-progress game? (Use this only if you need to cancel or re-select teams.)")) return;
+    config.lockedGame = null;
+    save();
+  }
+
+  function recordMatch() {
+    const activeEv = events.find(e => e.active);
+    // Support submitting locked game directly, or a manually selected game
+    let t1, t2;
+    const manualT1 = Object.keys(selections).filter(n => selections[n] === 1);
+    const manualT2 = Object.keys(selections).filter(n => selections[n] === 2);
+    if (manualT1.length === 2 && manualT2.length === 2) {
+      t1 = manualT1; t2 = manualT2;
+    } else if (config.lockedGame && manualT1.length === 0 && manualT2.length === 0) {
+      // Allow submitting the locked game when no other selection is active
+      t1 = config.lockedGame.t1; t2 = config.lockedGame.t2;
+      // Pre-fill team name displays so the confirm makes sense
+    } else {
+      t1 = manualT1; t2 = manualT2;
+    }
     const s1 = parseInt(document.getElementById('s1').value);
     const s2 = parseInt(document.getElementById('s2').value);
 
@@ -915,6 +1011,17 @@ let lastPlanStartCounts = {};
       const pl = players.find(x => x.name === n);
       if (pl) pl.lastPlayed = now;
     });
+
+    // Auto-clear the lock if we just submitted the locked game
+    if (config.lockedGame) {
+      const lt1 = config.lockedGame.t1.slice().sort().join(',');
+      const lt2 = config.lockedGame.t2.slice().sort().join(',');
+      const st1 = t1.slice().sort().join(',');
+      const st2 = t2.slice().sort().join(',');
+      if ((lt1 === st1 && lt2 === st2) || (lt1 === st2 && lt2 === st1)) {
+        config.lockedGame = null;
+      }
+    }
 
     selections = {};
     document.getElementById('s1').value = '';
@@ -946,21 +1053,35 @@ let lastPlanStartCounts = {};
   // Auto Pair (lookahead)
   // ─────────────────────────────────────────
   function suggestTeams() {
-    let pool = players.filter(p => p.present);
-    if (pool.length < 4) return alert("Check in at least 4 players first!");
+    const allPresent = players.filter(p => p.present);
+    if (allPresent.length < 4) return alert("Check in at least 4 players first!");
+
+    // Exclude locked players from the pool for this suggestion
+    const lockedNames = new Set([
+      ...(config.lockedGame ? config.lockedGame.t1 : []),
+      ...(config.lockedGame ? config.lockedGame.t2 : [])
+    ]);
+    let pool = allPresent.filter(p => !lockedNames.has(p.name));
+    if (pool.length < 4) return alert("Not enough free players (others are locked in current game). Wait for them to finish or unlock.");
 
     const activeEv = events.find(e => e.active);
     const activeEventId = activeEv ? activeEv.id : 'def';
 
     let counts = {};
-    pool.forEach(p => counts[p.name] = gamesSinceArrivalToday(p));
-    let restStreak = computeRestStreak(pool);
+    // For locked players, count their games + 1 virtual game (they're playing right now)
+    allPresent.forEach(p => {
+      counts[p.name] = gamesSinceArrivalToday(p) + (lockedNames.has(p.name) ? 1 : 0);
+    });
+    let restStreak = computeRestStreak(allPresent);
 
     const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
     const todayC = buildTodayCounts(activeEventId, pool);
     const decayC = buildDecayCounts(activeEventId, 30);
 
-    const st = initState(pool, counts, restStreak, daySeed, todayC, decayC);
+    // Only pass free players as pool but carry the full counts for fairness
+    const poolCounts = {};
+    pool.forEach(p => poolCounts[p.name] = counts[p.name]);
+    const st = initState(pool, poolCounts, restStreak, daySeed, todayC, decayC);
     const best = chooseBestMatchLookahead(pool, st);
     if (!best) return alert("No suitable pairing found (constraints too tight). Try adjusting skill ratings or ensure more players are present.");
 
@@ -969,7 +1090,7 @@ let lastPlanStartCounts = {};
     best.t2.forEach(pp => selections[pp.name] = 2);
     updateUI();
 
-    updateNextUpPreview(pool, counts, restStreak, activeEventId);
+    updateNextUpPreview(pool, poolCounts, restStreak, activeEventId);
   }
 
   function updateNextUpPreview(pool, counts, restStreak, activeEventId) {
@@ -1079,36 +1200,94 @@ function generateFullDayPlan() {
     const activeEv = events.find(e => e.active);
     const activeEventId = activeEv ? activeEv.id : 'def';
 
-    // starting counts (today history)
+    // Locked game: players currently on court
+    const lockedNames = new Set([
+      ...(config.lockedGame ? config.lockedGame.t1 : []),
+      ...(config.lockedGame ? config.lockedGame.t2 : [])
+    ]);
+
+    // starting counts (today history); locked players get +1 virtual game
     let startCounts = {};
-    pool.forEach(p => startCounts[p.name] = gamesSinceArrivalToday(p));
+    pool.forEach(p => {
+      startCounts[p.name] = gamesSinceArrivalToday(p) + (lockedNames.has(p.name) ? 1 : 0);
+    });
 
     // cache for Copy button
     lastGeneratedPlan = [];
     lastPlanStartCounts = { ...startCounts };
-    
+
     let restStreak = computeRestStreak(pool);
+    // Locked players are "just played" — reset restStreak to 0
+    lockedNames.forEach(n => { if (restStreak[n] !== undefined) restStreak[n] = 0; });
 
     const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
     const todayC = buildTodayCounts(activeEventId, pool);
     const decayC = buildDecayCounts(activeEventId, 30);
 
+    // Seed todayCounts with the locked game so the engine treats it as already played
+    if (config.lockedGame) {
+      const lg = config.lockedGame;
+      if (lg.t1.length === 2) {
+        const k1 = pairKey(lg.t1[0], lg.t1[1]);
+        todayC.partner[k1] = (todayC.partner[k1] || 0) + 1;
+      }
+      if (lg.t2.length === 2) {
+        const k2 = pairKey(lg.t2[0], lg.t2[1]);
+        todayC.partner[k2] = (todayC.partner[k2] || 0) + 1;
+      }
+      lg.t1.forEach(a => lg.t2.forEach(b => {
+        const ok = pairKey(a, b);
+        todayC.opponent[ok] = (todayC.opponent[ok] || 0) + 1;
+      }));
+      const k4 = lineupKey4([...lg.t1, ...lg.t2]);
+      todayC.matchup4[k4] = (todayC.matchup4[k4] || 0) + 1;
+    }
+
     let st = initState(pool, startCounts, restStreak, daySeed, todayC, decayC);
 
     let html = '';
+
+    // If a game is currently locked (in progress), show it as Game 0 at the top
+	if (config.lockedGame) {
+      const lg = config.lockedGame;
+      html += `<div class="single-row" style="flex-direction:column; align-items:flex-start; gap:2px; background:#fffbe6; border-color:#ffc107;">
+        <div style="display:flex; justify-content:space-between; width:100%">
+          <span style="font-size:9px; color:#856404; font-weight:bold;">🔒 IN PROGRESS</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 25px 1fr; width: 100%; align-items: center; font-size: 12px;">
+            <div style="color:var(--fb-blue); font-weight:bold; text-align: right; padding-right: 8px;">
+              ${lg.t1.join(' & ')}
+            </div>
+            <div style="color:#999; font-weight:bold; text-align: center;">vs</div>
+            <div style="color:var(--fb-red); font-weight:bold; text-align: left; padding-left: 8px;">
+              ${lg.t2.join(' & ')}
+            </div>
+        </div>
+      </div>`;
+    }
+
     for (let g=1; g<=numGames; g++) {
       const best = chooseBestMatchLookahead(pool, st);
       if (!best) break;
 
       const playing = [...best.t1, ...best.t2].map(p=>p.name);
-      const gap = best.gap !== undefined ? best.gap : Math.abs((getEffectiveSkill(best.t1[0])+getEffectiveSkill(best.t1[1])) - (getEffectiveSkill(best.t2[0])+getEffectiveSkill(best.t2[1])));
+	  
+	  const gap = best.gap !== undefined ? best.gap : Math.abs((getEffectiveSkill(best.t1[0])+getEffectiveSkill(best.t1[1])) - (getEffectiveSkill(best.t2[0])+getEffectiveSkill(best.t2[1])));
 
       html += `<div class="single-row" style="flex-direction:column; align-items:flex-start; gap:2px;">
         <div style="display:flex; justify-content:space-between; width:100%">
           <span style="font-size:9px; color:var(--fb-blue); font-weight:bold;">GAME ${g}</span>
           <span style="font-size:8px; color:#999;">Skill gap: ${gap}</span>
         </div>
-        <div style="font-size:12px;"><span style="color:var(--fb-blue); font-weight:bold">${best.t1.map(pp=>pp.name).join("&")}</span> <b style="color:#999">vs</b> <span style="color:var(--fb-red); font-weight:bold">${best.t2.map(pp=>pp.name).join("&")}</span></div>
+        <div style="display: grid; grid-template-columns: 1fr 25px 1fr; width: 100%; align-items: center; font-size: 12px;">
+          <div style="color:var(--fb-blue); font-weight:bold; text-align: right; padding-right: 8px;">
+            ${best.t1.map(pp=>pp.name).join(" & ")}
+          </div>
+          <div style="color:#999; font-weight:bold; text-align: center;">vs</div>
+          <div style="color:var(--fb-red); font-weight:bold; text-align: left; padding-left: 8px;">
+            ${best.t2.map(pp=>pp.name).join(" & ")}
+          </div>
+        </div>
       </div>`;
 
       lastGeneratedPlan.push({ g: g, t1: best.t1.map(pp=>pp.name), t2: best.t2.map(pp=>pp.name) });
