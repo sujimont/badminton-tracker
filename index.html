@@ -10,7 +10,7 @@
     :root { --fb-blue: #1877f2; --fb-red: #dc3545; --fb-gray: #f0f2f5; --fb-green: #28a745; --fb-gold: #ffd700; }
     body { font-family: -apple-system, sans-serif; margin: 0; background: var(--fb-gray); padding-bottom: 110px; font-size: 15px; }
     .header { background: var(--fb-blue); color: white; padding: 6px; text-align: center; font-weight: bold; position: sticky; top: 0; z-index: 1000; }
-    .container { padding: 4px; max-width: 600px; margin: auto; }
+    .container { padding: 4px; max-width: 600px; margin: auto; transition: zoom 0.2s ease; }
     .card { background: white; padding: 8px; margin-bottom: 6px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     h3 { margin: 0 0 5px 0; font-size: 13px; border-bottom: 1px solid #eee; padding-bottom: 2px; display: flex; justify-content: space-between; align-items: center; }
     .last-game-box { background: #fffbe6; border: 1px solid #ffe58f; padding: 6px; border-radius: 8px; margin-bottom: 6px; text-align: center; font-size: 11px; color: #856404; font-weight: bold; line-height: 1.2; }
@@ -34,7 +34,7 @@
     .single-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: #fff; border-radius: 10px; margin-bottom: 4px; border: 1px solid #eee; }
     table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; }
     th, td { padding: 6px 2px; border-bottom: 1px solid #eee; }
-    .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; }
+    .tab-bar { position: fixed; bottom: 0; width: 100%; background: white; display: flex; border-top: 1px solid #ddd; padding-bottom: env(safe-area-inset-bottom); overflow-x: auto; z-index: 1000;}
     .tab-btn { flex: 1; padding: 12px 5px; border: none; background: none; font-size: 9px; color: #888; min-width: 55px; }
     .tab-btn.active { color: var(--fb-blue); border-top: 3px solid var(--fb-blue); font-weight: bold; }
     .tab-content { display: none; }
@@ -63,7 +63,7 @@
 <body>
   <div class="header">🏸 Fit Boys Pro Master</div>
 
-  <div class="container">
+  <div class="container" id="mainContainer">
     <div id="tab-play" class="tab-content active">
       <div id="lastGameAlert" class="last-game-box" style="display:none;"></div>
 
@@ -218,6 +218,12 @@
     </div>
   </div>
 
+  <div id="zoomWidget" style="position: fixed; bottom: 85px; right: 15px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; opacity: 0.85;">
+    <button onclick="adjustZoom(0.1)" style="width: 40px; height: 40px; border-radius: 50%; background: white; color: var(--fb-blue); border: 2px solid var(--fb-blue); box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 24px; font-weight: bold; padding: 0; line-height: 1; display:flex; justify-content:center; align-items:center; transition: transform 0.1s;">+</button>
+    <button onclick="resetZoom()" style="width: 40px; height: 40px; border-radius: 50%; background: white; color: #666; border: 2px solid #999; box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 13px; font-weight: bold; padding: 0; line-height: 1; display:flex; justify-content:center; align-items:center; transition: transform 0.1s;">1x</button>
+    <button onclick="adjustZoom(-0.1)" style="width: 40px; height: 40px; border-radius: 50%; background: white; color: var(--fb-blue); border: 2px solid var(--fb-blue); box-shadow: 0 3px 6px rgba(0,0,0,0.3); font-size: 24px; font-weight: bold; padding: 0; line-height: 1; display:flex; justify-content:center; align-items:center; transition: transform 0.1s;">−</button>
+  </div>
+
   <div class="tab-bar">
     <button class="tab-btn active" onclick="switchTab('play', this)">🎮 Play</button>
     <button class="tab-btn" onclick="switchTab('schedule', this)">📅 Plan</button>
@@ -338,7 +344,10 @@
   const LOOKAHEAD_DEPTH = 3; 
   const BEAM_WIDTH = 25;
 
-  window.addEventListener('DOMContentLoaded', _initFirebase);
+  window.addEventListener('DOMContentLoaded', () => {
+    applyZoom();
+    _initFirebase();
+  });
 
   function save() {
     if (!_isOnline || !_cloudDoc) {
@@ -698,7 +707,6 @@
   }
 
   function pickCandidates(pool, state) {
-    // Smart Lock Avoidance: If gameIdx is 0 (immediate next match), exclude players in the locked game.
     const availablePool = (state.gameIdx === 0 && state.lockedNames) 
       ? pool.filter(p => !state.lockedNames.has(p.name)) 
       : pool;
@@ -1537,6 +1545,31 @@
     alert("Event data cleared.");
     }
   } 
+
+  // ─────────────────────────────────────────
+  // Single-Handed Zoom Controls
+  // ─────────────────────────────────────────
+  let appZoom = parseFloat(localStorage.getItem('fb_zoom')) || 1;
+
+  function applyZoom() {
+    localStorage.setItem('fb_zoom', appZoom);
+    const container = document.querySelector('.container');
+    if (container) {
+      container.style.zoom = appZoom;
+    }
+  }
+
+  function adjustZoom(delta) {
+    appZoom += delta;
+    appZoom = Math.max(0.6, Math.min(appZoom, 2.0)); // min 60%, max 200%
+    applyZoom();
+  }
+
+  function resetZoom() {
+    appZoom = 1;
+    applyZoom();
+  }
+
 </script>
 </body>
 </html>
