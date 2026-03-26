@@ -51,8 +51,6 @@
     .player-locked .player-name-cell { background:#f5f5f5 !important; border-color:#ddd !important; }
     .lock-btn { background:white; color:#856404; border:1px solid #ffc107; font-size:10px; padding:4px 8px; border-radius:8px; font-weight:bold; cursor:pointer; margin-left:4px; }
     .lock-btn:disabled { opacity:0.35; cursor:default; }
-
-    /* Plan totals (mobile friendly chips) */
     .plan-totals-wrap { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0 8px 0; }
     .plan-chip { font-size:10px; padding:4px 8px; border-radius:999px; background:#f0f2f5; border:1px solid #e5e7eb; color:#333; display:flex; gap:6px; align-items:center; }
     .plan-chip b { font-size:11px; }
@@ -116,9 +114,7 @@
             </label>
           </div>
         </h3>
-
         <div id="planTotals"></div>
-
         <div id="schedulePlanList"></div>
       </div>
     </div>
@@ -183,23 +179,26 @@
           <label>Win Bonus:</label><input type="number" id="winBonus" />
           <label>Winner Margin Multi:</label><input type="number" step="0.1" id="marginMult" />
           <label>Loser Point Multi:</label><input type="number" step="0.1" id="loseDeduct" />
+          <label title="Highest skill diff allowed before the app refuses to pair them">Max Skill Gap Allowed:</label><input type="number" id="maxSkillGap" min="0" />
         </div>
 
         <div style="margin-top:8px; border-top:1px solid #eee; padding-top:8px;">
           <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">📅 Plan Seed Override</div>
           <div style="display:grid; grid-template-columns: 1fr 80px; gap:4px; font-size:12px; align-items:center;">
-            <label style="line-height:1.3;">Force new plan (increment to regenerate on same day / use previous days plan):</label>
+            <label style="line-height:1.3;">Force new plan (increment to regenerate on same day):</label>
             <input type="number" id="planSeedOffsetInput" min="0" step="1" style="text-align:center;" />
           </div>
-          <div style="font-size:10px; color:#888; margin-top:2px;">Change this number to get a fresh plan without waiting for the next day.</div>
         </div>
 
         <div style="margin-top:8px; border-top:1px solid #eee; padding-top:8px;">
           <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">⚙️ Skill Mode</div>
-          <select id="skillModeSelect" style="width:100%; font-size:13px;">
+          <select id="skillModeSelect" style="width:100%; font-size:13px; margin-bottom:4px;">
             <option value="manual">Manual — use skill ratings set by admin</option>
-            <option value="dynamic">Dynamic — auto-calculate from win rate (min. 20 games)</option>
+            <option value="dynamic">Dynamic — auto-calculate from win rate</option>
           </select>
+          <div style="display:grid; grid-template-columns: 1fr 80px; gap:4px; font-size:12px; align-items:center;">
+            <label>Min games for dynamic:</label><input type="number" id="minDynamicGames" min="1" />
+          </div>
           <div id="skillModeInfo" style="font-size:10px; color:#888; margin-top:4px; line-height:1.4;"></div>
         </div>
 
@@ -247,13 +246,11 @@
     appId: "1:592621421914:web:5f0e2a4ff2b56c056f5f63"
   };
 
-  // ── Storage layer: Firebase ONLY (multi-user shared data) ──
   let _cloudDoc = null;
   let _isOnline = false;
 
   function _setOnlineState(online) {
     _isOnline = online;
-
     const h = document.querySelector('.header');
     let badge = document.getElementById('syncBadge');
     if (!badge) {
@@ -264,8 +261,6 @@
     }
     badge.style.background = online ? 'rgba(255,255,255,0.25)' : 'rgba(220,53,69,0.7)';
     badge.textContent = online ? '☁️ Online' : '⚠️ Offline';
-    badge.title = online ? 'Connected — changes save to all devices' : 'No connection — changes are disabled until back online';
-
     let banner = document.getElementById('offlineBanner');
     if (!banner) {
       banner = document.createElement('div');
@@ -275,7 +270,6 @@
       document.querySelector('.container').prepend(banner);
     }
     banner.style.display = online ? 'none' : 'block';
-
     const submitBtn = document.querySelector('button.btn-blue[onclick="recordMatch()"]');
     if (submitBtn) {
       submitBtn.disabled = !online;
@@ -303,13 +297,17 @@
             config = d.config;
             if (config.lockedGame === undefined) config.lockedGame = null;
             if (config.planSeedOffset === undefined) config.planSeedOffset = 0;
+            if (config.minDynamicGames === undefined) config.minDynamicGames = 20;
+            if (config.maxSkillGap === undefined) config.maxSkillGap = 3;
             document.getElementById('winBonus').value = config.winBonus;
             document.getElementById('marginMult').value = config.marginMult;
             document.getElementById('loseDeduct').value = config.loseDeduct;
             const sm = document.getElementById('skillModeSelect');
             if (sm) sm.value = config.skillMode || 'manual';
             const pso = document.getElementById('planSeedOffsetInput');
-            if (pso) pso.value = config.planSeedOffset || 0;
+            if (pso) pso.value = config.planSeedOffset;
+            document.getElementById('minDynamicGames').value = config.minDynamicGames;
+            document.getElementById('maxSkillGap').value = config.maxSkillGap;
           }
           updateUI();
         }
@@ -317,7 +315,6 @@
         console.warn('Firestore snapshot error:', err);
         _setOnlineState(false);
       });
-
     } catch (e) {
       console.warn('Firebase init failed:', e);
       _setOnlineState(false);
@@ -327,19 +324,13 @@
   let players = [];
   let matchHistory = [];
   let events = [{ id:'def', name:'Regular', active:true }];
-  let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1, skillMode: 'manual', lockedGame: null, planSeedOffset: 0 };
+  let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1, skillMode: 'manual', lockedGame: null, planSeedOffset: 0, minDynamicGames: 20, maxSkillGap: 3 };
   let selections = {};
   let matrixMode = 'partner';
   let lastGeneratedPlan = []; 
   let lastPlanTotals = {};
   let lastPlanStartCounts = {};
   let lastPlanGeneratedAt = 0;
-
-  // ─────────────────────────────────────────
-  // Pairing constraints
-  // ─────────────────────────────────────────
-  const MAX_SKILL_GAP = 3;      
-  const MAX_SKILL_GAP_SOFT = 5; 
 
   const LOOKAHEAD_DEPTH = 3; 
   const BEAM_WIDTH = 25;
@@ -379,9 +370,6 @@
     btn.classList.add('active');
   }
 
-  // ─────────────────────────────────────────
-  // Helpers
-  // ─────────────────────────────────────────
   function getTodayStr() { return new Date().toISOString().split('T')[0]; }
   function pairKey(a, b) { return [a,b].sort().join('::'); }
   function lineupKey4(names4) { return names4.slice().sort().join('::'); }
@@ -422,14 +410,11 @@
     ];
   }
 
-  // ─────────────────────────────────────────
-  // Skill helpers
-  // ─────────────────────────────────────────
   function getEffectiveSkill(player) {
-    const MIN_GAMES_FOR_DYNAMIC = 20;
+    const minG = config.minDynamicGames || 20;
     if (config.skillMode !== 'dynamic') return player.skill;
     const pGames = matchHistory.filter(m => [...m.t1, ...m.t2].includes(player.name));
-    if (pGames.length < MIN_GAMES_FOR_DYNAMIC) return player.skill;
+    if (pGames.length < minG) return player.skill;
     const wins = pGames.filter(m => (m.t1.includes(player.name) && m.s1 > m.s2) || (m.t2.includes(player.name) && m.s2 > m.s1)).length;
     const winRate = wins / pGames.length;
     return Math.max(1, Math.min(10, Math.round(1 + 9 * winRate)));
@@ -437,20 +422,17 @@
 
   function getSkillModeInfo() {
     if (config.skillMode !== 'dynamic') return '';
-    const MIN = 20;
+    const minG = config.minDynamicGames || 20;
     const gameCounts = {};
     matchHistory.forEach(m => [...m.t1, ...m.t2].forEach(n => {
       gameCounts[n] = (gameCounts[n] || 0) + 1;
     }));
-    const notReady = players.filter(p => (gameCounts[p.name] || 0) < MIN);
-    if (notReady.length === 0) return '✅ All players have ≥20 games — dynamic skill active for everyone.';
-    const names = notReady.map(p => `${p.name} (${gameCounts[p.name]||0}/${MIN})`).join(', ');
+    const notReady = players.filter(p => (gameCounts[p.name] || 0) < minG);
+    if (notReady.length === 0) return `✅ All players have ≥${minG} games — dynamic skill active for everyone.`;
+    const names = notReady.map(p => `${p.name} (${gameCounts[p.name]||0}/${minG})`).join(', ');
     return `⏳ Using manual skill for: ${names}`;
   }
 
-  // ─────────────────────────────────────────
-  // History counts (today + decay for cross-day variety)
-  // ─────────────────────────────────────────
   function buildDecayCounts(eventId=null, days=30) {
     const now = Date.now();
     const DAY = 24*60*60*1000;
@@ -519,9 +501,6 @@
     return { partner, opponent, matchup4 };
   }
 
-  // ─────────────────────────────────────────
-  // Fairness (games since arrival today) + rest streak estimate
-  // ─────────────────────────────────────────
   function gamesSinceArrivalToday(p) {
     const todayStr = getTodayStr();
     const arrival = p.arrivalTime || 0;
@@ -555,9 +534,6 @@
     return streak;
   }
 
-  // ─────────────────────────────────────────
-  // Lookahead planning engine (beam search)
-  // ─────────────────────────────────────────
   function initState(pool, counts, restStreak, daySeed, todayCounts, decayCounts, lockedNames) {
     const st = {
       poolNames: pool.map(p=>p.name),
@@ -665,9 +641,12 @@
     const s2 = _getSkillCached(match.t2[0]) + _getSkillCached(match.t2[1]);
     const gap = Math.abs(s1 - s2);
 
+    const gapThreshold = config.maxSkillGap !== undefined ? config.maxSkillGap : 3;
+    const gapThresholdSoft = gapThreshold + 2;
+
     let gapPenalty = 0;
-    if (gap > MAX_SKILL_GAP_SOFT) gapPenalty = 2_000_000;
-    else if (gap > MAX_SKILL_GAP) gapPenalty = 300_000;
+    if (gap > gapThresholdSoft) gapPenalty = 2_000_000;
+    else if (gap > gapThreshold) gapPenalty = 300_000;
 
     const tmpCounts = { ...state.counts };
     playing.forEach(n => tmpCounts[n] = (tmpCounts[n] || 0) + 1);
@@ -791,9 +770,6 @@
     return { ...best.first, gap: best.firstGap };
   }
 
-  // ─────────────────────────────────────────
-  // Single Source of Truth Engine Init
-  // ─────────────────────────────────────────
   function buildEngineState(pool) {
     const activeEv = events.find(e => e.active);
     const activeEventId = activeEv ? activeEv.id : 'def';
@@ -857,9 +833,6 @@
     };
   }
 
-  // ─────────────────────────────────────────
-  // UI render
-  // ─────────────────────────────────────────
   function updateUI() {
     const ef = document.getElementById('rankEventFilter');
     const rf = document.getElementById('resetEventSelect');
@@ -1040,6 +1013,11 @@
     if (smi) smi.textContent = getSkillModeInfo();
     const psoUi = document.getElementById('planSeedOffsetInput');
     if (psoUi && document.activeElement !== psoUi) psoUi.value = config.planSeedOffset || 0;
+    
+    const maxGapUi = document.getElementById('maxSkillGap');
+    if (maxGapUi && document.activeElement !== maxGapUi) maxGapUi.value = config.maxSkillGap !== undefined ? config.maxSkillGap : 3;
+    const minDynUi = document.getElementById('minDynamicGames');
+    if (minDynUi && document.activeElement !== minDynUi) minDynUi.value = config.minDynamicGames || 20;
 
     // Event list in Admin
     const evList = document.getElementById('eventList');
@@ -1062,9 +1040,6 @@
     }
   }
 
-  // ─────────────────────────────────────────
-  // CRUD & gameplay
-  // ─────────────────────────────────────────
   function addPlayer() {
     const n = document.getElementById('newName');
     if (n.value) {
@@ -1171,16 +1146,21 @@
     config.marginMult = parseFloat(document.getElementById('marginMult').value);
     config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value);
     config.skillMode = document.getElementById('skillModeSelect').value;
+    
     const psoEl = document.getElementById('planSeedOffsetInput');
     if (psoEl) config.planSeedOffset = parseInt(psoEl.value) || 0;
+    
+    config.maxSkillGap = parseInt(document.getElementById('maxSkillGap').value);
+    if (isNaN(config.maxSkillGap)) config.maxSkillGap = 3;
+    
+    config.minDynamicGames = parseInt(document.getElementById('minDynamicGames').value);
+    if (isNaN(config.minDynamicGames) || config.minDynamicGames < 1) config.minDynamicGames = 20;
+
     if (save()) alert("Rules Saved");
   }
 
   function deletePlayer(n) { if (confirm("Delete?")) { players = players.filter(x => x.name !== n); save(); } }
 
-  // ─────────────────────────────────────────
-  // Event management
-  // ─────────────────────────────────────────
   function addEvent() {
     const inp = document.getElementById('newEventName');
     const name = inp.value.trim();
@@ -1229,9 +1209,6 @@
     save();
   }
 
-  // ─────────────────────────────────────────
-  // Auto Pair (lookahead)
-  // ─────────────────────────────────────────
   function suggestTeams() {
     _skillCache = {}; 
     const pool = players.filter(p => p.present);
@@ -1258,10 +1235,9 @@
        best = chooseBestMatchLookahead(pool, engine.st);
     }
 
-    if (!best) return alert("No suitable pairing found (constraints too tight). Try adjusting skill ratings or ensure more players are present.");
+    if (!best) return alert("No suitable pairing found (constraints too tight). Try adjusting the Max Skill Gap allowed in Admin, or ensure more players are present.");
 
     if (config.lockedGame) {
-      // ONLY update the preview, DO NOT TOUCH selections or T1/T2 slots
       const el = document.getElementById('nextUpContainer');
       const lbl = el ? el.querySelector('div') : null;
       if (lbl) lbl.textContent = '⏭ Next Game (suggested)';
@@ -1271,7 +1247,6 @@
          <span style="color:#999; font-size:10px;">vs</span>
          <span class="next-team-2">${best.t2.map(p=>p.name).join(" & ")}</span>`;
     } else {
-      // Normal behavior when not locked
       selections = {};
       best.t1.forEach(pp => selections[pp.name] = 1);
       best.t2.forEach(pp => selections[pp.name] = 2);
@@ -1316,9 +1291,6 @@
        <span class="next-team-2">${next.t2.map(p=>p.name).join(" & ")}</span>`;
   }
 
-  // ─────────────────────────────────────────
-  // Copy game plan as text (WhatsApp/Email friendly)
-  // ─────────────────────────────────────────
   function copyGamePlan() {
     if (!lastGeneratedPlan || lastGeneratedPlan.length === 0) {
       alert('Generate a plan first, then press Copy.');
@@ -1371,9 +1343,6 @@
     }
   }
   
-  // ─────────────────────────────────────────
-  // Plan-continuation helpers
-  // ─────────────────────────────────────────
   function _planGamePlayed(pg, m) {
     const ps = new Set([...pg.t1, ...pg.t2]);
     const ms = new Set([...m.t1, ...m.t2]);
