@@ -106,14 +106,17 @@
     <div id="tab-schedule" class="tab-content">
       <div class="card">
         <h3>📅 Day Plan
-          <div style="display:flex; gap:5px; align-items:center;">
+          <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
             <input type="number" id="planGameCount" value="10" min="1" max="99" style="width:50px; padding:4px; font-size:12px;" />
             <button class="btn-outline" onclick="generateFullDayPlan()">Generate</button>
-          <button class="btn-outline" style="border-color:var(--fb-blue);color:var(--fb-blue);" onclick="copyGamePlan()">Copy</button>
+            <button class="btn-outline" style="border-color:var(--fb-blue);color:var(--fb-blue);" onclick="copyGamePlan()">Copy</button>
+            <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:#666;cursor:pointer;border:1px solid #ddd;border-radius:8px;padding:4px 8px;background:white;user-select:none;">
+              <input type="checkbox" id="planShuffleCheck" style="margin:0;padding:0;width:13px;height:13px;border:none;" />
+              🔀 Shuffle
+            </label>
           </div>
         </h3>
 
-        <!-- NEW: totals per player (today history + plan) -->
         <div id="planTotals"></div>
 
         <div id="schedulePlanList"></div>
@@ -183,6 +186,15 @@
         </div>
 
         <div style="margin-top:8px; border-top:1px solid #eee; padding-top:8px;">
+          <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">📅 Plan Seed Override</div>
+          <div style="display:grid; grid-template-columns: 1fr 80px; gap:4px; font-size:12px; align-items:center;">
+            <label style="line-height:1.3;">Force new plan (increment to regenerate on same day / use previous days plan):</label>
+            <input type="number" id="planSeedOffsetInput" min="0" step="1" style="text-align:center;" />
+          </div>
+          <div style="font-size:10px; color:#888; margin-top:2px;">Change this number to get a fresh plan without waiting for the next day.</div>
+        </div>
+
+        <div style="margin-top:8px; border-top:1px solid #eee; padding-top:8px;">
           <div style="font-size:12px; font-weight:bold; margin-bottom:4px;">⚙️ Skill Mode</div>
           <select id="skillModeSelect" style="width:100%; font-size:13px;">
             <option value="manual">Manual — use skill ratings set by admin</option>
@@ -192,6 +204,16 @@
         </div>
 
         <button onclick="updateSettings()" style="margin-top:8px; background:var(--fb-blue); width:100%;">SAVE RULES</button>
+      </div>
+
+      <div class="card">
+        <h3>🎯 Events / Tournaments</h3>
+        <div id="eventList" style="margin-bottom:8px;"></div>
+        <div style="display:flex; gap:5px; margin-top:4px;">
+          <input type="text" id="newEventName" placeholder="New event name" maxlength="20" style="flex:2;" />
+          <button class="btn-blue" style="flex:1;" onclick="addEvent()">ADD</button>
+        </div>
+        <div style="font-size:10px; color:#888; margin-top:4px;">The active event is used for all new match records. Switch events to run tournaments.</div>
       </div>
     </div>
   </div>
@@ -222,7 +244,6 @@
   // ── Storage layer: Firebase ONLY (multi-user shared data) ──
   let _cloudDoc = null;
   let _isOnline = false;
-
 
   function _setOnlineState(online) {
     _isOnline = online;
@@ -275,11 +296,14 @@
           if (d.config) {
             config = d.config;
             if (config.lockedGame === undefined) config.lockedGame = null;
+            if (config.planSeedOffset === undefined) config.planSeedOffset = 0;
             document.getElementById('winBonus').value = config.winBonus;
             document.getElementById('marginMult').value = config.marginMult;
             document.getElementById('loseDeduct').value = config.loseDeduct;
             const sm = document.getElementById('skillModeSelect');
             if (sm) sm.value = config.skillMode || 'manual';
+            const pso = document.getElementById('planSeedOffsetInput');
+            if (pso) pso.value = config.planSeedOffset || 0;
           }
           updateUI();
         }
@@ -297,22 +321,21 @@
   let players = [];
   let matchHistory = [];
   let events = [{ id:'def', name:'Regular', active:true }];
-  let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1, skillMode: 'manual', lockedGame: null };
+  let config = { winBonus: 3, marginMult: 1, loseDeduct: 0.2, minGames: 1, skillMode: 'manual', lockedGame: null, planSeedOffset: 0 };
   let selections = {};
   let matrixMode = 'partner';
-// Last generated plan cache (for Copy button)
-let lastGeneratedPlan = []; // [{g:1,t1:[names],t2:[names]}]
-let lastPlanTotals = {};
-let lastPlanStartCounts = {};
-
+  let lastGeneratedPlan = []; 
+  let lastPlanTotals = {};
+  let lastPlanStartCounts = {};
+  let lastPlanGeneratedAt = 0;
 
   // ─────────────────────────────────────────
   // Pairing constraints
   // ─────────────────────────────────────────
-  const MAX_SKILL_GAP = 3;      // target
-  const MAX_SKILL_GAP_SOFT = 5; // fallback
+  const MAX_SKILL_GAP = 3;      
+  const MAX_SKILL_GAP_SOFT = 5; 
 
-  const LOOKAHEAD_DEPTH = 3; // recommended sweet spot for mobile
+  const LOOKAHEAD_DEPTH = 3; 
   const BEAM_WIDTH = 25;
 
   window.addEventListener('DOMContentLoaded', _initFirebase);
@@ -362,6 +385,7 @@ let lastPlanStartCounts = {};
     }
     return h >>> 0;
   }
+  
   function mulberry32(a) {
     return function() {
       let t = a += 0x6D2B79F5;
@@ -405,12 +429,13 @@ let lastPlanStartCounts = {};
   function getSkillModeInfo() {
     if (config.skillMode !== 'dynamic') return '';
     const MIN = 20;
-    const notReady = players.filter(p => matchHistory.filter(m => [...m.t1, ...m.t2].includes(p.name)).length < MIN);
+    const gameCounts = {};
+    matchHistory.forEach(m => [...m.t1, ...m.t2].forEach(n => {
+      gameCounts[n] = (gameCounts[n] || 0) + 1;
+    }));
+    const notReady = players.filter(p => (gameCounts[p.name] || 0) < MIN);
     if (notReady.length === 0) return '✅ All players have ≥20 games — dynamic skill active for everyone.';
-    const names = notReady.map(p => {
-      const g = matchHistory.filter(m => [...m.t1, ...m.t2].includes(p.name)).length;
-      return `${p.name} (${g}/${MIN})`;
-    }).join(', ');
+    const names = notReady.map(p => `${p.name} (${gameCounts[p.name]||0}/${MIN})`).join(', ');
     return `⏳ Using manual skill for: ${names}`;
   }
 
@@ -524,7 +549,7 @@ let lastPlanStartCounts = {};
   // ─────────────────────────────────────────
   // Lookahead planning engine (beam search)
   // ─────────────────────────────────────────
-  function initState(pool, counts, restStreak, daySeed, todayCounts, decayCounts) {
+  function initState(pool, counts, restStreak, daySeed, todayCounts, decayCounts, lockedNames) {
     const st = {
       poolNames: pool.map(p=>p.name),
       counts: { ...counts },
@@ -537,7 +562,8 @@ let lastPlanStartCounts = {};
       opponentDecay: { ...decayCounts.opponent },
       matchup4Decay: { ...decayCounts.matchup4 },
       gameIdx: 0,
-      seed: daySeed
+      seed: daySeed,
+      lockedNames: lockedNames || new Set()
     };
     pool.forEach(p => st.lastPlayed[p.name] = p.lastPlayed || 0);
     return st;
@@ -601,6 +627,12 @@ let lastPlanStartCounts = {};
     return newS;
   }
 
+  let _skillCache = {};
+  function _getSkillCached(player) {
+    if (_skillCache[player.name] === undefined) _skillCache[player.name] = getEffectiveSkill(player);
+    return _skillCache[player.name];
+  }
+
   function scoreMatch(state, match) {
     const t1n = [match.t1[0].name, match.t1[1].name];
     const t2n = [match.t2[0].name, match.t2[1].name];
@@ -620,28 +652,26 @@ let lastPlanStartCounts = {};
       oppRepDecay += (state.opponentDecay[ok] || 0);
     }));
 
-    const s1 = getEffectiveSkill(match.t1[0]) + getEffectiveSkill(match.t1[1]);
-    const s2 = getEffectiveSkill(match.t2[0]) + getEffectiveSkill(match.t2[1]);
+    const s1 = _getSkillCached(match.t1[0]) + _getSkillCached(match.t1[1]);
+    const s2 = _getSkillCached(match.t2[0]) + _getSkillCached(match.t2[1]);
     const gap = Math.abs(s1 - s2);
 
     let gapPenalty = 0;
     if (gap > MAX_SKILL_GAP_SOFT) gapPenalty = 2_000_000;
     else if (gap > MAX_SKILL_GAP) gapPenalty = 300_000;
 
-    // Hard fairness: max-min cannot exceed 1 after applying
     const tmpCounts = { ...state.counts };
     playing.forEach(n => tmpCounts[n] = (tmpCounts[n] || 0) + 1);
     const mm = maxMinCounts(tmpCounts, state.poolNames);
     if ((mm.max - mm.min) > 1) return { cost: 9e15, gap, reason:'fairness' };
 
-    // Rest: hard for N<=8, best-effort for N>=9
     const N = state.poolNames.length;
     const enforceRestHard = (N <= 8);
     let restBad = 0;
     state.poolNames.forEach(n => {
       const isPlaying = playing.includes(n);
       const rs = state.restStreak[n] || 0;
-      if (!isPlaying && rs >= 1) restBad += 1; // would become 2+
+      if (!isPlaying && rs >= 1) restBad += 1; 
     });
     if (enforceRestHard && restBad > 0) return { cost: 9e14, gap, reason:'rest' };
 
@@ -649,7 +679,8 @@ let lastPlanStartCounts = {};
     const matchupRep = (state.matchup4Today[k4] || 0);
     const matchupRepDecay = (state.matchup4Decay[k4] || 0);
 
-    const rnd = mulberry32(state.seed + state.gameIdx * 1013)();
+    const matchIdentitySeed = hashStr([...t1n, ...t2n].sort().join('|'));
+    const rnd = mulberry32((state.seed ^ (state.gameIdx * 1013) ^ matchIdentitySeed) >>> 0)();
 
     const cost =
       partnerRep * 15000 +
@@ -661,27 +692,33 @@ let lastPlanStartCounts = {};
       gap * 250 +
       gapPenalty +
       restBad * (N <= 8 ? 0 : 20000) +
-      rnd * 5;
+      rnd * 180;
 
     return { cost, gap, reason:'ok' };
   }
 
-  function pickCandidates(pool, baseCounts, baseLastPlayed) {
-    const names = pool.map(p=>p.name);
-    const mm = maxMinCounts(baseCounts, names);
+  function pickCandidates(pool, state) {
+    // Smart Lock Avoidance: If gameIdx is 0 (immediate next match), exclude players in the locked game.
+    const availablePool = (state.gameIdx === 0 && state.lockedNames) 
+      ? pool.filter(p => !state.lockedNames.has(p.name)) 
+      : pool;
+      
+    const names = availablePool.map(p=>p.name);
+    const mm = maxMinCounts(state.counts, names);
     const minC = mm.min;
-    let eligible = pool.filter(p => (baseCounts[p.name] || 0) <= minC + 1);
+    
+    let eligible = availablePool.filter(p => (state.counts[p.name] || 0) <= minC + 1);
     eligible.sort((a,b) => {
-      const ca = baseCounts[a.name] || 0;
-      const cb = baseCounts[b.name] || 0;
+      const ca = state.counts[a.name] || 0;
+      const cb = state.counts[b.name] || 0;
       if (ca !== cb) return ca - cb;
-      return (baseLastPlayed[a.name] || 0) - (baseLastPlayed[b.name] || 0);
+      return (state.lastPlayed[a.name] || 0) - (state.lastPlayed[b.name] || 0);
     });
     return eligible.slice(0, Math.min(10, eligible.length));
   }
 
   function chooseBestMatchLookahead(pool, state) {
-    const candidates = pickCandidates(pool, state.counts, state.lastPlayed);
+    const candidates = pickCandidates(pool, state);
     if (candidates.length < 4) return null;
 
     const firstActions = [];
@@ -694,7 +731,6 @@ let lastPlanStartCounts = {};
     });
 
     if (firstActions.length === 0) {
-      // fallback: minimal gap among fairness-valid splits
       let best = null;
       combo4(candidates).forEach(p4 => {
         splitsOf4(p4).forEach(sp => {
@@ -703,7 +739,7 @@ let lastPlanStartCounts = {};
           playing.forEach(n => tmpCounts[n] = (tmpCounts[n] || 0) + 1);
           const mm = maxMinCounts(tmpCounts, state.poolNames);
           if ((mm.max - mm.min) > 1) return;
-          const gap = Math.abs((getEffectiveSkill(sp.t1[0])+getEffectiveSkill(sp.t1[1])) - (getEffectiveSkill(sp.t2[0])+getEffectiveSkill(sp.t2[1])));
+          const gap = Math.abs((_getSkillCached(sp.t1[0])+_getSkillCached(sp.t1[1])) - (_getSkillCached(sp.t2[0])+_getSkillCached(sp.t2[1])));
           if (!best || gap < best.gap) best = { match: sp, gap };
         });
       });
@@ -722,7 +758,7 @@ let lastPlanStartCounts = {};
     for (let d=1; d<LOOKAHEAD_DEPTH; d++) {
       let nextBeam = [];
       beam.forEach(node => {
-        const cand2 = pickCandidates(pool, node.state.counts, node.state.lastPlayed);
+        const cand2 = pickCandidates(pool, node.state);
         if (cand2.length < 4) {
           nextBeam.push(node);
           return;
@@ -745,6 +781,72 @@ let lastPlanStartCounts = {};
     beam.sort((x,y) => x.total - y.total);
     const best = beam[0];
     return { ...best.first, gap: best.firstGap };
+  }
+
+  // ─────────────────────────────────────────
+  // Single Source of Truth Engine Init
+  // ─────────────────────────────────────────
+  function buildEngineState(pool) {
+    const activeEv = events.find(e => e.active);
+    const activeEventId = activeEv ? activeEv.id : 'def';
+    const todayStr = getTodayStr();
+
+    const lockedNames = new Set([
+      ...(config.lockedGame ? config.lockedGame.t1 : []),
+      ...(config.lockedGame ? config.lockedGame.t2 : [])
+    ]);
+
+    let startCounts = {};
+    pool.forEach(p => {
+      startCounts[p.name] = gamesSinceArrivalToday(p) + (lockedNames.has(p.name) ? 1 : 0);
+    });
+
+    let restStreak = computeRestStreak(pool);
+    lockedNames.forEach(n => { if (restStreak[n] !== undefined) restStreak[n] = 0; });
+
+    const todayC = buildTodayCounts(activeEventId, pool);
+    const decayC = buildDecayCounts(activeEventId, 30);
+
+    if (config.lockedGame) {
+      const lg = config.lockedGame;
+      if (lg.t1.length === 2) { const k1 = pairKey(lg.t1[0], lg.t1[1]); todayC.partner[k1] = (todayC.partner[k1]||0)+1; }
+      if (lg.t2.length === 2) { const k2 = pairKey(lg.t2[0], lg.t2[1]); todayC.partner[k2] = (todayC.partner[k2]||0)+1; }
+      lg.t1.forEach(a => lg.t2.forEach(b => { const ok=pairKey(a,b); todayC.opponent[ok]=(todayC.opponent[ok]||0)+1; }));
+      todayC.matchup4[lineupKey4([...lg.t1,...lg.t2])] = (todayC.matchup4[lineupKey4([...lg.t1,...lg.t2])]||0)+1;
+    }
+
+    const shuffleEl = document.getElementById('planShuffleCheck');
+    const isShuffle = !!(shuffleEl && shuffleEl.checked);
+    
+    let completedCount = 0;
+    if (!isShuffle && lastGeneratedPlan.length > 0 && lastPlanGeneratedAt > 0) {
+      const histAfterPlan = matchHistory.filter(m =>
+        m.time > lastPlanGeneratedAt &&
+        new Date(m.time).toISOString().split('T')[0] === todayStr
+      );
+      completedCount = _countCompletedPlanGames(lastGeneratedPlan, histAfterPlan);
+    }
+
+    const totalGamesToday = pool.reduce((sum, p) => sum + gamesSinceArrivalToday(p), 0);
+    const seedStr = todayStr + '|' + activeEventId + '|'
+      + pool.map(p=>p.name).sort().join(',')
+      + '|o' + (config.planSeedOffset || 0);
+
+    const continuationSeedStr = completedCount > 0
+      ? seedStr + '|c' + completedCount
+      : seedStr + '|g' + totalGamesToday;
+      
+    const daySeed = isShuffle
+      ? hashStr(continuationSeedStr + '|' + Date.now())
+      : hashStr(continuationSeedStr);
+
+    return {
+      st: initState(pool, startCounts, restStreak, daySeed, todayC, decayC, lockedNames),
+      completedCount,
+      isShuffle,
+      todayStr,
+      activeEventId
+    };
   }
 
   // ─────────────────────────────────────────
@@ -798,7 +900,6 @@ let lastPlanStartCounts = {};
 
     const top3Names = sorted.filter(x => x.pts > 0).slice(0,3).map(x => x.name);
 
-    // today game counts for present
     const todayCounts = {};
     players.filter(p => p.present).forEach(p => todayCounts[p.name] = gamesSinceArrivalToday(p));
     const present = players.filter(p => p.present);
@@ -824,7 +925,6 @@ let lastPlanStartCounts = {};
         </div>`;
       }).join('');
 
-    // Locked game banner
     const lBanner = document.getElementById('lockedGameBanner');
     const lTeams = document.getElementById('lockedGameTeams');
     if (config.lockedGame && lBanner && lTeams) {
@@ -832,9 +932,10 @@ let lastPlanStartCounts = {};
       lTeams.innerHTML = `<span style="color:var(--fb-blue)">${config.lockedGame.t1.join(' & ')}</span> <span style="color:#999">vs</span> <span style="color:var(--fb-red)">${config.lockedGame.t2.join(' & ')}</span>`;
     } else if (lBanner) {
       lBanner.style.display = 'none';
+      const nextLbl = document.querySelector('#nextUpContainer div');
+      if (nextLbl) nextLbl.textContent = '🕒 On Deck (Next Game)';
     }
 
-    // Lock button: enable only when exactly 4 non-locked players are selected
     const lockBtn = document.getElementById('lockBtn');
     if (lockBtn) {
       const sel4 = Object.keys(selections).filter(n => !lockedNames.has(n));
@@ -843,27 +944,28 @@ let lastPlanStartCounts = {};
       lockBtn.disabled = !(t1sel.length===2 && t2sel.length===2) || !!config.lockedGame;
     }
 
-	// Update Auto-Pair button state based on lockedGame status
     const autoPairBtn = document.querySelector('button[onclick="suggestTeams()"]');
     const isGameLocked = !!config.lockedGame;
-
     if (autoPairBtn) {
-      autoPairBtn.disabled = isGameLocked;
-      autoPairBtn.style.opacity = isGameLocked ? "0.5" : "1";
-      autoPairBtn.style.cursor = isGameLocked ? "not-allowed" : "pointer";
-      autoPairBtn.innerText = isGameLocked ? "🔒 Locked" : "Auto-Pair";
+      autoPairBtn.disabled = false;
+      autoPairBtn.style.opacity = '1';
+      autoPairBtn.style.cursor = 'pointer';
+      autoPairBtn.innerText = isGameLocked ? "⏭ Next Pair" : "Auto-Pair";
+      autoPairBtn.title = isGameLocked ? "Suggest next game for free players (locked game stays)" : "Auto-suggest teams for next game";
     }
 
+    const manualT1 = Object.keys(selections).filter(n => selections[n] === 1);
+    const manualT2 = Object.keys(selections).filter(n => selections[n] === 2);
 
-    //document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
-    //document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
-	// FIX: Show locked names if a game is locked, otherwise show current selections
-    if (config.lockedGame) {
+    if (manualT1.length > 0 || manualT2.length > 0) {
+      document.getElementById('t1Names').innerText = manualT1.join(" & ");
+      document.getElementById('t2Names').innerText = manualT2.join(" & ");
+    } else if (config.lockedGame) {
       document.getElementById('t1Names').innerText = config.lockedGame.t1.join(" & ");
       document.getElementById('t2Names').innerText = config.lockedGame.t2.join(" & ");
     } else {
-      document.getElementById('t1Names').innerText = Object.keys(selections).filter(n => selections[n] === 1).join(" & ");
-      document.getElementById('t2Names').innerText = Object.keys(selections).filter(n => selections[n] === 2).join(" & ");
+      document.getElementById('t1Names').innerText = "";
+      document.getElementById('t2Names').innerText = "";
     }
 
     // Matrix
@@ -928,6 +1030,28 @@ let lastPlanStartCounts = {};
     if (sm) sm.value = config.skillMode || 'manual';
     const smi = document.getElementById('skillModeInfo');
     if (smi) smi.textContent = getSkillModeInfo();
+    const psoUi = document.getElementById('planSeedOffsetInput');
+    if (psoUi && document.activeElement !== psoUi) psoUi.value = config.planSeedOffset || 0;
+
+    // Event list in Admin
+    const evList = document.getElementById('eventList');
+    if (evList) {
+      evList.innerHTML = events.map(e => {
+        const isActive = !!e.active;
+        const matchCount = matchHistory.filter(m => (m.eventId || 'def') === e.id).length;
+        return `<div class="single-row" style="padding:5px 8px;">
+          <div>
+            <b style="font-size:12px;">${e.name}</b>
+            <span style="font-size:10px; color:#888; margin-left:6px;">${matchCount} match${matchCount!==1?'es':''}</span>
+            ${isActive ? '<span style="font-size:9px; background:var(--fb-green); color:white; border-radius:8px; padding:1px 6px; margin-left:4px;">ACTIVE</span>' : ''}
+          </div>
+          <div style="display:flex;gap:4px;">
+            ${!isActive ? `<button class="btn-outline" style="color:var(--fb-green);border-color:var(--fb-green);" onclick="setActiveEvent('${e.id}')">Set Active</button>` : ''}
+            ${e.id !== 'def' ? `<button class="btn-outline" style="color:var(--fb-red);border-color:var(--fb-red);" onclick="deleteEvent('${e.id}')">🗑️</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
   }
 
   // ─────────────────────────────────────────
@@ -943,6 +1067,11 @@ let lastPlanStartCounts = {};
   }
 
   function selectTeam(n, t) {
+    const locked = new Set([
+      ...(config.lockedGame ? config.lockedGame.t1 : []),
+      ...(config.lockedGame ? config.lockedGame.t2 : [])
+    ]);
+    if (locked.has(n)) return;
     if (selections[n] === t) delete selections[n];
     else {
       if (Object.values(selections).filter(v=>v===t).length >= 2) return;
@@ -953,22 +1082,25 @@ let lastPlanStartCounts = {};
 
   function togglePresence(n) {
     let p = players.find(x => x.name === n);
+    if (p.present && config.lockedGame) {
+      const isLocked = [...config.lockedGame.t1, ...config.lockedGame.t2].includes(n);
+      if (isLocked) {
+        if (!confirm(`⚠️ ${n} is currently in a locked game. Removing them will clear the lock. Continue?`)) return;
+        config.lockedGame = null;
+      }
+    }
     p.present = !p.present;
     if (p.present) p.arrivalTime = Date.now();
     else p.arrivalTime = 0;
     save();
   }
 
-  // ─────────────────────────────────────────
-  // Locked game management
-  // ─────────────────────────────────────────
   function lockCurrentGame() {
     const t1 = Object.keys(selections).filter(n => selections[n] === 1);
     const t2 = Object.keys(selections).filter(n => selections[n] === 2);
     if (t1.length !== 2 || t2.length !== 2) return alert("Select exactly 2 players for each team first.");
     if (!confirm(`Lock game in progress?\n${t1.join(' & ')} vs ${t2.join(' & ')}\n\nThis lets you regenerate the plan for remaining players while this game finishes.`)) return;
     config.lockedGame = { t1, t2, lockedAt: Date.now() };
-    // Clear selections — locked players move to the banner, freeing the UI for the next game
     selections = {};
     save();
   }
@@ -982,16 +1114,13 @@ let lastPlanStartCounts = {};
 
   function recordMatch() {
     const activeEv = events.find(e => e.active);
-    // Support submitting locked game directly, or a manually selected game
     let t1, t2;
     const manualT1 = Object.keys(selections).filter(n => selections[n] === 1);
     const manualT2 = Object.keys(selections).filter(n => selections[n] === 2);
     if (manualT1.length === 2 && manualT2.length === 2) {
       t1 = manualT1; t2 = manualT2;
     } else if (config.lockedGame && manualT1.length === 0 && manualT2.length === 0) {
-      // Allow submitting the locked game when no other selection is active
       t1 = config.lockedGame.t1; t2 = config.lockedGame.t2;
-      // Pre-fill team name displays so the confirm makes sense
     } else {
       t1 = manualT1; t2 = manualT2;
     }
@@ -1012,7 +1141,6 @@ let lastPlanStartCounts = {};
       if (pl) pl.lastPlayed = now;
     });
 
-    // Auto-clear the lock if we just submitted the locked game
     if (config.lockedGame) {
       const lt1 = config.lockedGame.t1.slice().sort().join(',');
       const lt2 = config.lockedGame.t2.slice().sort().join(',');
@@ -1035,106 +1163,150 @@ let lastPlanStartCounts = {};
     config.marginMult = parseFloat(document.getElementById('marginMult').value);
     config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value);
     config.skillMode = document.getElementById('skillModeSelect').value;
+    const psoEl = document.getElementById('planSeedOffsetInput');
+    if (psoEl) config.planSeedOffset = parseInt(psoEl.value) || 0;
     if (save()) alert("Rules Saved");
   }
 
   function deletePlayer(n) { if (confirm("Delete?")) { players = players.filter(x => x.name !== n); save(); } }
+
+  // ─────────────────────────────────────────
+  // Event management
+  // ─────────────────────────────────────────
+  function addEvent() {
+    const inp = document.getElementById('newEventName');
+    const name = inp.value.trim();
+    if (!name) return alert("Enter an event name.");
+    if (!auth(ADMIN_PWD)) return;
+    const id = 'ev_' + Date.now();
+    events.push({ id, name, active: false });
+    inp.value = '';
+    save();
+  }
+
+  function setActiveEvent(id) {
+    if (!auth(ADMIN_PWD)) return;
+    events.forEach(e => e.active = (e.id === id));
+    save();
+  }
+
+  function deleteEvent(id) {
+    if (id === 'def') return alert("Cannot delete the Regular event.");
+    const ev = events.find(e => e.id === id);
+    if (!ev) return;
+    const matchCount = matchHistory.filter(m => (m.eventId || 'def') === id).length;
+    const msg = matchCount > 0
+      ? `Delete event "${ev.name}"? It has ${matchCount} match records — those will NOT be deleted, but the event label will be removed.`
+      : `Delete event "${ev.name}"?`;
+    if (!confirm(msg)) return;
+    if (!auth(ADMIN_PWD)) return;
+    events = events.filter(e => e.id !== id);
+    if (!events.find(e => e.active)) events[0].active = true;
+    save();
+  }
   function updateSkill(n,v) { players.find(x => x.name===n).skill = parseInt(v); save(); }
   function deleteMatch(id) { if (auth(SUPER_PWD)) { matchHistory = matchHistory.filter(m => m.id !== id); save(); } }
   function editMatch(id) {
     if (!auth(SUPER_PWD)) return;
     let m = matchHistory.find(x => x.id === id);
     let ns1 = prompt("T1 Score:", m.s1);
+    if (ns1 === null) return;
     let ns2 = prompt("T2 Score:", m.s2);
-    if (ns1 !== null) { m.s1 = parseInt(ns1); m.s2 = parseInt(ns2); save(); }
+    if (ns2 === null) return;
+    const p1 = parseInt(ns1), p2 = parseInt(ns2);
+    if (isNaN(p1) || isNaN(p2)) return alert("Scores must be numbers.");
+    if (p1 < 0 || p2 < 0) return alert("Scores cannot be negative.");
+    if (p1 === p2) return alert("Scores cannot be equal — no ties in badminton!");
+    m.s1 = p1; m.s2 = p2;
+    save();
   }
 
   // ─────────────────────────────────────────
   // Auto Pair (lookahead)
   // ─────────────────────────────────────────
   function suggestTeams() {
-    const allPresent = players.filter(p => p.present);
-    if (allPresent.length < 4) return alert("Check in at least 4 players first!");
+    _skillCache = {}; 
+    const pool = players.filter(p => p.present);
+    if (pool.length < 4) return alert("Check in at least 4 players first!");
 
-    // Exclude locked players from the pool for this suggestion
-    const lockedNames = new Set([
-      ...(config.lockedGame ? config.lockedGame.t1 : []),
-      ...(config.lockedGame ? config.lockedGame.t2 : [])
-    ]);
-    let pool = allPresent.filter(p => !lockedNames.has(p.name));
-    if (pool.length < 4) return alert("Not enough free players (others are locked in current game). Wait for them to finish or unlock.");
+    const engine = buildEngineState(pool);
+    let best = null;
 
-    const activeEv = events.find(e => e.active);
-    const activeEventId = activeEv ? activeEv.id : 'def';
+    let retainedGames = [];
+    const presentNames = new Set(pool.map(p => p.name));
+    if (!engine.isShuffle && lastGeneratedPlan.length > 0 && lastPlanGeneratedAt > 0 && engine.completedCount > 0) {
+      retainedGames = lastGeneratedPlan
+        .slice(engine.completedCount)
+        .filter(pg => [...pg.t1, ...pg.t2].every(n => presentNames.has(n)));
+    }
 
-    let counts = {};
-    // For locked players, count their games + 1 virtual game (they're playing right now)
-    allPresent.forEach(p => {
-      counts[p.name] = gamesSinceArrivalToday(p) + (lockedNames.has(p.name) ? 1 : 0);
-    });
-    let restStreak = computeRestStreak(allPresent);
+    if (retainedGames.length > 0) {
+      const t1 = retainedGames[0].t1.map(n => pool.find(p=>p.name===n)).filter(Boolean);
+      const t2 = retainedGames[0].t2.map(n => pool.find(p=>p.name===n)).filter(Boolean);
+      if (t1.length === 2 && t2.length === 2) best = { t1, t2 };
+    }
 
-    const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
-    const todayC = buildTodayCounts(activeEventId, pool);
-    const decayC = buildDecayCounts(activeEventId, 30);
+    if (!best) {
+       best = chooseBestMatchLookahead(pool, engine.st);
+    }
 
-    // Only pass free players as pool but carry the full counts for fairness
-    const poolCounts = {};
-    pool.forEach(p => poolCounts[p.name] = counts[p.name]);
-    const st = initState(pool, poolCounts, restStreak, daySeed, todayC, decayC);
-    const best = chooseBestMatchLookahead(pool, st);
     if (!best) return alert("No suitable pairing found (constraints too tight). Try adjusting skill ratings or ensure more players are present.");
 
-    selections = {};
-    best.t1.forEach(pp => selections[pp.name] = 1);
-    best.t2.forEach(pp => selections[pp.name] = 2);
-    updateUI();
-
-    updateNextUpPreview(pool, poolCounts, restStreak, activeEventId);
+    if (config.lockedGame) {
+      // ONLY update the preview, DO NOT TOUCH selections or T1/T2 slots
+      const el = document.getElementById('nextUpContainer');
+      const lbl = el ? el.querySelector('div') : null;
+      if (lbl) lbl.textContent = '⏭ Next Game (suggested)';
+      document.getElementById('nextUpContainer').style.display = 'block';
+      document.getElementById('nextUpNames').innerHTML =
+        `<span class="next-team-1">${best.t1.map(p=>p.name).join(" & ")}</span>
+         <span style="color:#999; font-size:10px;">vs</span>
+         <span class="next-team-2">${best.t2.map(p=>p.name).join(" & ")}</span>`;
+    } else {
+      // Normal behavior when not locked
+      selections = {};
+      best.t1.forEach(pp => selections[pp.name] = 1);
+      best.t2.forEach(pp => selections[pp.name] = 2);
+      updateUI();
+      updateNextUpPreview(pool, engine.st, best, retainedGames);
+    }
   }
 
-  function updateNextUpPreview(pool, counts, restStreak, activeEventId) {
+  function updateNextUpPreview(pool, baseSt, currentBestMatch, retainedGames) {
     const playingNow = Object.keys(selections);
     if (playingNow.length !== 4) {
       document.getElementById('nextUpContainer').style.display = 'none';
       return;
     }
 
-    const todayC = buildTodayCounts(activeEventId, pool);
-    const decayC = buildDecayCounts(activeEventId, 30);
-    const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
-
-    const st = initState(pool, counts, restStreak, daySeed, todayC, decayC);
-
-    const t1n = Object.keys(selections).filter(n => selections[n]===1);
-    const t2n = Object.keys(selections).filter(n => selections[n]===2);
-    const t1 = t1n.map(n => pool.find(p=>p.name===n)).filter(Boolean);
-    const t2 = t2n.map(n => pool.find(p=>p.name===n)).filter(Boolean);
-    if (t1.length !== 2 || t2.length !== 2) {
-      document.getElementById('nextUpContainer').style.display = 'none';
-      return;
+    let next = null;
+    if (retainedGames && retainedGames.length > 1) {
+       const t1 = retainedGames[1].t1.map(n => pool.find(p=>p.name===n)).filter(Boolean);
+       const t2 = retainedGames[1].t2.map(n => pool.find(p=>p.name===n)).filter(Boolean);
+       if (t1.length === 2 && t2.length === 2) next = { t1, t2 };
     }
 
-    const curMatch = { t1, t2 };
-    const st2 = applyMatch(st, curMatch, playingNow);
+    if (!next) {
+       const playingNames = [...currentBestMatch.t1, ...currentBestMatch.t2].map(p=>p.name);
+       const st2 = applyMatch(baseSt, currentBestMatch, playingNames);
+       next = chooseBestMatchLookahead(pool, st2);
+    }
 
-    const next = chooseBestMatchLookahead(pool, st2);
     if (!next) {
       document.getElementById('nextUpContainer').style.display = 'none';
       return;
     }
 
     document.getElementById('nextUpContainer').style.display = 'block';
+    const el = document.getElementById('nextUpContainer');
+    const lbl = el ? el.querySelector('div') : null;
+    if (lbl) lbl.textContent = '🕒 On Deck (Next Game)';
+    
     document.getElementById('nextUpNames').innerHTML =
       `<span class="next-team-1">${next.t1.map(p=>p.name).join(" & ")}</span>
        <span style="color:#999; font-size:10px;">vs</span>
        <span class="next-team-2">${next.t2.map(p=>p.name).join(" & ")}</span>`;
   }
-
-  // ─────────────────────────────────────────
-  // Day Plan (lookahead) + NEW totals display
-  // ─────────────────────────────────────────
-  
 
   // ─────────────────────────────────────────
   // Copy game plan as text (WhatsApp/Email friendly)
@@ -1145,7 +1317,6 @@ let lastPlanStartCounts = {};
       return;
     }
 
-    // Build totals line
     const names = Object.keys(lastPlanTotals).sort((a,b)=>a.localeCompare(b));
     const totalsLines = names.map(n => {
       const total = lastPlanTotals[n] || 0;
@@ -1166,7 +1337,6 @@ let lastPlanStartCounts = {};
 
     const text = lines.join('\n');
 
-    // Clipboard (mobile-friendly fallback)
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => {
         alert('✅ Plan copied! Paste into WhatsApp / email.');
@@ -1192,169 +1362,181 @@ let lastPlanStartCounts = {};
       document.body.removeChild(ta);
     }
   }
-function generateFullDayPlan() {
+  
+  // ─────────────────────────────────────────
+  // Plan-continuation helpers
+  // ─────────────────────────────────────────
+  function _planGamePlayed(pg, m) {
+    const ps = new Set([...pg.t1, ...pg.t2]);
+    const ms = new Set([...m.t1, ...m.t2]);
+    if (ps.size !== 4 || ms.size !== 4) return false;
+    for (const n of ps) if (!ms.has(n)) return false;
+    return true;
+  }
+
+  function _countCompletedPlanGames(plan, histMatches) {
+    const remaining = histMatches.slice(); 
+    let count = 0;
+    for (const pg of plan) {
+      const idx = remaining.findIndex(m => _planGamePlayed(pg, m));
+      if (idx === -1) break; 
+      remaining.splice(idx, 1);
+      count++;
+    }
+    return count;
+  }
+
+  function _replayPlanGames(games, pool, initSt) {
+    let st = initSt;
+    for (const pg of games) {
+      const t1 = pg.t1.map(n => pool.find(p => p.name === n)).filter(Boolean);
+      const t2 = pg.t2.map(n => pool.find(p => p.name === n)).filter(Boolean);
+      if (t1.length !== 2 || t2.length !== 2) continue;
+      const playing = [...t1, ...t2].map(p => p.name);
+      st = applyMatch(st, { t1, t2 }, playing);
+    }
+    return st;
+  }
+
+  function _renderGameRow(g, t1names, t2names, gap, tag) {
+    const tagHtml = tag
+      ? `<span style="font-size:8px;color:#888;font-style:italic;">${tag}</span>`
+      : `<span style="font-size:8px; color:#999;">Skill gap: ${gap}</span>`;
+    return `<div class="single-row" style="flex-direction:column; align-items:flex-start; gap:2px;">
+      <div style="display:flex; justify-content:space-between; width:100%">
+        <span style="font-size:9px; color:var(--fb-blue); font-weight:bold;">GAME ${g}</span>
+        ${tagHtml}
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 25px 1fr; width:100%; align-items:center; font-size:12px;">
+        <div style="color:var(--fb-blue); font-weight:bold; text-align:right; padding-right:8px;">${t1names.join(" & ")}</div>
+        <div style="color:#999; font-weight:bold; text-align:center;">vs</div>
+        <div style="color:var(--fb-red); font-weight:bold; text-align:left; padding-left:8px;">${t2names.join(" & ")}</div>
+      </div>
+    </div>`;
+  }
+
+  function generateFullDayPlan() {
+    _skillCache = {}; 
     let pool = players.filter(p => p.present);
     if (pool.length < 4) return alert("Need 4 players present!");
 
-    let numGames = parseInt(document.getElementById('planGameCount').value) || 10;
-    const activeEv = events.find(e => e.active);
-    const activeEventId = activeEv ? activeEv.id : 'def';
+    const numGames = parseInt(document.getElementById('planGameCount').value) || 10;
+    const presentNames = new Set(pool.map(p => p.name));
 
-    // Locked game: players currently on court
+    const engine = buildEngineState(pool);
+    let st = engine.st;
+
+    let retainedGames = []; 
+    if (!engine.isShuffle && lastGeneratedPlan.length > 0 && lastPlanGeneratedAt > 0 && engine.completedCount > 0) {
+      retainedGames = lastGeneratedPlan
+        .slice(engine.completedCount)
+        .filter(pg => [...pg.t1, ...pg.t2].every(n => presentNames.has(n)));
+    }
+
+    lastPlanGeneratedAt = Date.now();
+
+    if (retainedGames.length > 0) {
+      st = _replayPlanGames(retainedGames, pool, st);
+    }
+
+    const newTailCount = numGames - retainedGames.length;
+
+    lastGeneratedPlan = [];
+    
     const lockedNames = new Set([
       ...(config.lockedGame ? config.lockedGame.t1 : []),
       ...(config.lockedGame ? config.lockedGame.t2 : [])
     ]);
-
-    // starting counts (today history); locked players get +1 virtual game
     let startCounts = {};
     pool.forEach(p => {
       startCounts[p.name] = gamesSinceArrivalToday(p) + (lockedNames.has(p.name) ? 1 : 0);
     });
-
-    // cache for Copy button
-    lastGeneratedPlan = [];
     lastPlanStartCounts = { ...startCounts };
+    
+    let planHtml = '';
 
-    let restStreak = computeRestStreak(pool);
-    // Locked players are "just played" — reset restStreak to 0
-    lockedNames.forEach(n => { if (restStreak[n] !== undefined) restStreak[n] = 0; });
-
-    const daySeed = hashStr(getTodayStr() + '|' + activeEventId);
-    const todayC = buildTodayCounts(activeEventId, pool);
-    const decayC = buildDecayCounts(activeEventId, 30);
-
-    // Seed todayCounts with the locked game so the engine treats it as already played
     if (config.lockedGame) {
       const lg = config.lockedGame;
-      if (lg.t1.length === 2) {
-        const k1 = pairKey(lg.t1[0], lg.t1[1]);
-        todayC.partner[k1] = (todayC.partner[k1] || 0) + 1;
-      }
-      if (lg.t2.length === 2) {
-        const k2 = pairKey(lg.t2[0], lg.t2[1]);
-        todayC.partner[k2] = (todayC.partner[k2] || 0) + 1;
-      }
-      lg.t1.forEach(a => lg.t2.forEach(b => {
-        const ok = pairKey(a, b);
-        todayC.opponent[ok] = (todayC.opponent[ok] || 0) + 1;
-      }));
-      const k4 = lineupKey4([...lg.t1, ...lg.t2]);
-      todayC.matchup4[k4] = (todayC.matchup4[k4] || 0) + 1;
-    }
-
-    let st = initState(pool, startCounts, restStreak, daySeed, todayC, decayC);
-
-    let html = '';
-
-    // If a game is currently locked (in progress), show it as Game 0 at the top
-	if (config.lockedGame) {
-      const lg = config.lockedGame;
-      html += `<div class="single-row" style="flex-direction:column; align-items:flex-start; gap:2px; background:#fffbe6; border-color:#ffc107;">
-        <div style="display:flex; justify-content:space-between; width:100%">
-          <span style="font-size:9px; color:#856404; font-weight:bold;">🔒 IN PROGRESS</span>
+      planHtml += `<div class="single-row" style="flex-direction:column;align-items:flex-start;gap:2px;background:#fffbe6;border-color:#ffc107;">
+        <div style="display:flex;justify-content:space-between;width:100%">
+          <span style="font-size:9px;color:#856404;font-weight:bold;">🔒 IN PROGRESS</span>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 25px 1fr; width: 100%; align-items: center; font-size: 12px;">
-            <div style="color:var(--fb-blue); font-weight:bold; text-align: right; padding-right: 8px;">
-              ${lg.t1.join(' & ')}
-            </div>
-            <div style="color:#999; font-weight:bold; text-align: center;">vs</div>
-            <div style="color:var(--fb-red); font-weight:bold; text-align: left; padding-left: 8px;">
-              ${lg.t2.join(' & ')}
-            </div>
+        <div style="display:grid;grid-template-columns:1fr 25px 1fr;width:100%;align-items:center;font-size:12px;">
+          <div style="color:var(--fb-blue);font-weight:bold;text-align:right;padding-right:8px;">${lg.t1.join(' & ')}</div>
+          <div style="color:#999;font-weight:bold;text-align:center;">vs</div>
+          <div style="color:var(--fb-red);font-weight:bold;text-align:left;padding-left:8px;">${lg.t2.join(' & ')}</div>
         </div>
       </div>`;
     }
 
-    for (let g=1; g<=numGames; g++) {
+    retainedGames.forEach((pg, i) => {
+      const g = i + 1;
+      const t1objs = pg.t1.map(n => pool.find(p=>p.name===n)).filter(Boolean);
+      const t2objs = pg.t2.map(n => pool.find(p=>p.name===n)).filter(Boolean);
+      const gap = (t1objs.length===2 && t2objs.length===2)
+        ? Math.abs((_getSkillCached(t1objs[0])+_getSkillCached(t1objs[1])) - (_getSkillCached(t2objs[0])+_getSkillCached(t2objs[1])))
+        : '?';
+      planHtml += _renderGameRow(g, pg.t1, pg.t2, gap, null);
+      lastGeneratedPlan.push({ g, t1: pg.t1, t2: pg.t2 });
+    });
+
+    for (let i = 0; i < newTailCount; i++) {
+      const g = retainedGames.length + i + 1;
       const best = chooseBestMatchLookahead(pool, st);
       if (!best) break;
-
-      const playing = [...best.t1, ...best.t2].map(p=>p.name);
-	  
-	  const gap = best.gap !== undefined ? best.gap : Math.abs((getEffectiveSkill(best.t1[0])+getEffectiveSkill(best.t1[1])) - (getEffectiveSkill(best.t2[0])+getEffectiveSkill(best.t2[1])));
-
-      html += `<div class="single-row" style="flex-direction:column; align-items:flex-start; gap:2px;">
-        <div style="display:flex; justify-content:space-between; width:100%">
-          <span style="font-size:9px; color:var(--fb-blue); font-weight:bold;">GAME ${g}</span>
-          <span style="font-size:8px; color:#999;">Skill gap: ${gap}</span>
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 25px 1fr; width: 100%; align-items: center; font-size: 12px;">
-          <div style="color:var(--fb-blue); font-weight:bold; text-align: right; padding-right: 8px;">
-            ${best.t1.map(pp=>pp.name).join(" & ")}
-          </div>
-          <div style="color:#999; font-weight:bold; text-align: center;">vs</div>
-          <div style="color:var(--fb-red); font-weight:bold; text-align: left; padding-left: 8px;">
-            ${best.t2.map(pp=>pp.name).join(" & ")}
-          </div>
-        </div>
-      </div>`;
-
-      lastGeneratedPlan.push({ g: g, t1: best.t1.map(pp=>pp.name), t2: best.t2.map(pp=>pp.name) });
+      const playing = [...best.t1, ...best.t2].map(p => p.name);
+      const gap = best.gap !== undefined ? best.gap
+        : Math.abs((_getSkillCached(best.t1[0])+_getSkillCached(best.t1[1])) - (_getSkillCached(best.t2[0])+_getSkillCached(best.t2[1])));
+      planHtml += _renderGameRow(g, best.t1.map(p=>p.name), best.t2.map(p=>p.name), gap, null);
+      lastGeneratedPlan.push({ g, t1: best.t1.map(p=>p.name), t2: best.t2.map(p=>p.name) });
       st = applyMatch(st, best, playing);
     }
 
-    document.getElementById('schedulePlanList').innerHTML = html;
+    if (engine.completedCount > 0) {
+      const msg = retainedGames.length > 0
+        ? `↩ Continued from previous plan — ${engine.completedCount} completed game${engine.completedCount>1?'s':''} rolled off, ${retainedGames.length} carried over, ${newTailCount} new game${newTailCount>1?'s':''} added.`
+        : `↩ All previous plan games completed — fresh plan generated.`;
+      planHtml = `<div style="font-size:10px;color:#856404;background:#fffbe6;border:1px solid #ffe58f;border-radius:8px;padding:5px 8px;margin-bottom:6px;">${msg}</div>` + planHtml;
+    }
 
-    // NEW: totals per player (today history + planned games)
+    document.getElementById('schedulePlanList').innerHTML = planHtml;
+
     const totals = st.counts;
     lastPlanTotals = { ...totals };
     const names = pool.map(p => p.name).slice().sort((a,b) => a.localeCompare(b));
-
     let minT = Infinity, maxT = -Infinity;
-    names.forEach(n => {
-      const v = totals[n] || 0;
-      if (v < minT) minT = v;
-      if (v > maxT) maxT = v;
-    });
-
+    names.forEach(n => { const v = totals[n]||0; if (v<minT) minT=v; if (v>maxT) maxT=v; });
     const chips = names.map(n => {
-      const total = totals[n] || 0;
-      const already = startCounts[n] || 0;
-      const add = Math.max(0, total - already);
+      const total = totals[n]||0, already = startCounts[n]||0, add = Math.max(0, total-already);
       return `<span class="plan-chip"><b>${n}</b> <span>${total}</span> <span class="delta">(+${add})</span></span>`;
     }).join('');
-
     const summary = `<div class="plan-summary">Totals include today's played games (since arrival) + this plan. Range: <b>${minT}</b> to <b>${maxT}</b>.</div>`;
-
-    document.getElementById('planTotals').innerHTML = `<div style="font-size:10px; font-weight:bold; color:#333; margin-top:4px;">📌 Total games per player (today + plan)</div><div class="plan-totals-wrap">${chips}</div>${summary}`;
+    document.getElementById('planTotals').innerHTML = `<div style="font-size:10px;font-weight:bold;color:#333;margin-top:4px;">📌 Total games per player (today + plan)</div><div class="plan-totals-wrap">${chips}</div>${summary}`;
   }
 
- 
-  
-	// ✅ RESET — proven working logic 
-	function clearTournamentRecords() {
-	  const resetId = document.getElementById('resetEventSelect').value;
-	  if (!resetId) {
-		alert("Select an event from the dropdown to reset.");
-		return;
-	  }
+  function clearTournamentRecords() {
+    const resetId = document.getElementById('resetEventSelect').value;
+    if (!resetId) {
+    alert("Select an event from the dropdown to reset.");
+    return;
+    }
 
-	  const ev = events.find(e => e.id === resetId);
-	  if (!ev) {
-		alert("Event not found.");
-		return;
-	  }
+    const ev = events.find(e => e.id === resetId);
+    if (!ev) {
+    alert("Event not found.");
+    return;
+    }
 
-	  // IMPORTANT: must use SUPER_PWD
-	  if (!auth(SUPER_PWD)) return;
+    if (!auth(SUPER_PWD)) return;
 
-	  if (confirm(`⚠️ Reset "${ev.name}"?\nAll matches for this event will be deleted.`)) {
-
-		// ✅ STRICT eventId filter — do NOT normalize names
-		matchHistory = matchHistory.filter(m => m.eventId !== resetId);
-
-		// same behavior as your old working file
-		players.forEach(p => p.lastPlayed = 0);
-
-		save();        // overwrite Firestore
-		updateUI();    // refresh UI
-
-		alert("Event data cleared.");
-	  }
-	} 
-
- 
+    if (confirm(`⚠️ Reset "${ev.name}"?\nAll matches for this event will be deleted.`)) {
+    matchHistory = matchHistory.filter(m => (m.eventId || 'def') !== resetId);
+    players.forEach(p => p.lastPlayed = 0);
+    save();        
+    updateUI();    
+    alert("Event data cleared.");
+    }
+  } 
 </script>
 </body>
 </html>
