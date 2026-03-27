@@ -1575,12 +1575,21 @@
     applyZoom();
   }
 
-  // Register Service Worker for PWA
+  // Register Service Worker for PWA with Auto-Update
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(err => {
         console.log('Service Worker registration failed: ', err);
       });
+    });
+
+    // Detect when a new update has taken over and instantly refresh the screen
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        window.location.reload();
+        refreshing = true;
+      }
     });
   }
 
