@@ -1,14 +1,15 @@
-const CACHE_NAME = 'fitboys-cache-v1';
+const CACHE_NAME = 'fitboys-cache-v1'; // Remember to bump this to v2, v3, etc. when you update!
 
-// These are the files the phone will save for offline use
 const urlsToCache = [
-  './',               // Caches the root directory
-  './index.html',     // Caches your main app file
-  './manifest.json'   // Caches the app settings
+  './',
+  './index.html',
+  './manifest.json'
 ];
 
-// Install the Service Worker and save the files
 self.addEventListener('install', event => {
+  // FORCE THE NEW VERSION TO TAKE OVER IMMEDIATELY
+  self.skipWaiting(); 
+  
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       return cache.addAll(urlsToCache);
@@ -16,17 +17,14 @@ self.addEventListener('install', event => {
   );
 });
 
-// Intercept network requests and serve from cache if available
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response => {
-      // Return the cached version if found, otherwise fetch from the internet
       return response || fetch(event.request);
     })
   );
 });
 
-// Clean up old caches when a new version is activated
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
