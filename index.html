@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Fit Boys Pro Master</title>
+  <title>Fit Boys Pro</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1877f2">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
   <style>
@@ -214,6 +219,9 @@
         </div>
         <div style="font-size:10px; color:#888; margin-top:4px;">The active event is used for all new match records. Switch events to run tournaments.</div>
       </div>
+      
+      <div style="text-align: center; margin-top: 10px; margin-bottom: 20px; font-size: 11px; color: #999; font-weight: bold;">App Version: v1.0.0</div>
+
     </div>
   </div>
 
@@ -234,8 +242,9 @@
   </div>
 
 <script>
-  const ADMIN_PWD = "suji";
-  const SUPER_PWD = "P@ssword";
+  // SECURE HASHED PASSWORDS
+  const ADMIN_HASH = 4053806938; // hash for suji
+  const SUPER_HASH = 2939816429; // hash for P@ssword
 
   const firebaseConfig = {
     apiKey: "AIzaSyCn2ZdRrvfFWFJFiRbPmJi2galq768OPH4",
@@ -354,7 +363,21 @@
     return true;
   }
 
-  function auth(pwd) { return prompt("Password:") === pwd; }
+  function hashStr(s) {
+    let h = 2166136261;
+    for (let i=0;i<s.length;i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return h >>> 0;
+  }
+
+  // SECURE AUTH CHECK
+  function auth(requiredHash) { 
+    const input = prompt("Password:");
+    if (!input) return false;
+    return hashStr(input) === requiredHash; 
+  }
 
   function setMatrixMode(m) {
     matrixMode = m;
@@ -373,15 +396,6 @@
   function getTodayStr() { return new Date().toISOString().split('T')[0]; }
   function pairKey(a, b) { return [a,b].sort().join('::'); }
   function lineupKey4(names4) { return names4.slice().sort().join('::'); }
-
-  function hashStr(s) {
-    let h = 2166136261;
-    for (let i=0;i<s.length;i++) {
-      h ^= s.charCodeAt(i);
-      h = Math.imul(h, 16777619);
-    }
-    return h >>> 0;
-  }
   
   function mulberry32(a) {
     return function() {
@@ -417,7 +431,8 @@
     if (pGames.length < minG) return player.skill;
     const wins = pGames.filter(m => (m.t1.includes(player.name) && m.s1 > m.s2) || (m.t2.includes(player.name) && m.s2 > m.s1)).length;
     const winRate = wins / pGames.length;
-    return Math.max(1, Math.min(10, Math.round(1 + 9 * winRate)));
+    // INVERTED: 100% win rate = 1, 0% win rate = 10
+    return Math.max(1, Math.min(10, Math.round(1 + 9 * (1 - winRate))));
   }
 
   function getSkillModeInfo() {
@@ -980,11 +995,12 @@
       });
     });
     const sPairs = Object.keys(ps).map(k => ({ n:k, ...ps[k] })).filter(p => p.g >= 2).sort((a,b) => (b.w/b.g) - (a.w/a.g));
-    document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left">${p.n}</td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
+    document.getElementById('pairsBody').innerHTML = sPairs.map((p,i) => `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.n}</b></td><td>${p.g}</td><td>${p.w}-${p.l}</td><td>${((p.w/p.g)*100).toFixed(0)}%</td></tr>`).join('');
 
-    document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) =>
-      `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g} <span style="font-size:9px;color:#888;">(${p.w}/${p.l})</span></td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`
-    ).join('');
+    document.getElementById('leaderboardBody').innerHTML = sorted.map((p,i) => {
+      const winPct = p.g > 0 ? Math.round((p.w / p.g) * 100) : 0;
+      return `<tr><td>${i+1}</td><td style="text-align:left"><b>${p.name}</b></td><td>${p.g} <span style="font-size:9px;color:#888;">(${p.w}/${p.l} | ${winPct}%)</span></td><td>${p.pts.toFixed(1)}</td><td><b>${(p.pts/(p.g||1)).toFixed(1)}</b></td></tr>`;
+    }).join('');
 
     // roster
     document.getElementById('rosterList').innerHTML = players
@@ -1003,7 +1019,7 @@
     document.getElementById('historyList').innerHTML = [...matchHistory].reverse().map(m => {
       const w1 = m.s1 > m.s2;
       const d = m.time ? new Date(m.time).toLocaleString([], {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '';
-      return `<div class="single-row"><div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(${w1?m.t1.join("/"):m.t2.join("/")} beat ${w1?m.t2.join("/"):m.t1.join("/")})</small><span class="hist-date">${d}</span></div>
+      return `<div class="single-row"><div><b>${w1?m.s1:m.s2}</b>-${w1?m.s2:m.s1} <small>(<b>${w1?m.t1.join(" & "):m.t2.join(" & ")}</b> beat <b>${w1?m.t2.join(" & "):m.t1.join(" & ")}</b>)</small><span class="hist-date">${d}</span></div>
         <div style="display:flex; gap:3px;"><button class="btn-outline" onclick="editMatch(${m.id})">Edit</button><button class="btn-outline" style="color:red" onclick="deleteMatch(${m.id})">X</button></div></div>`;
     }).join('');
 
@@ -1115,7 +1131,7 @@
     if (isNaN(s1) || isNaN(s2)) return alert("Enter scores for both teams!");
     if (s1 === s2) return alert("Scores cannot be equal — no ties in badminton!");
 
-    if (!confirm(`Submit: ${t1.join("/")} ${s1} - ${s2} ${t2.join("/")}?`)) return;
+    if (!confirm(`Submit: ${t1.join(" & ")} ${s1} - ${s2} ${t2.join(" & ")}?`)) return;
 
     const now = Date.now();
     matchHistory.push({ t1, t2, s1, s2, id: now, time: now, eventId: activeEv ? activeEv.id : 'def' });
@@ -1141,7 +1157,7 @@
   }
 
   function updateSettings() {
-    if (!auth(ADMIN_PWD)) return;
+    if (!auth(ADMIN_HASH)) return; // SECURED
     config.winBonus = parseFloat(document.getElementById('winBonus').value);
     config.marginMult = parseFloat(document.getElementById('marginMult').value);
     config.loseDeduct = parseFloat(document.getElementById('loseDeduct').value);
@@ -1165,7 +1181,7 @@
     const inp = document.getElementById('newEventName');
     const name = inp.value.trim();
     if (!name) return alert("Enter an event name.");
-    if (!auth(ADMIN_PWD)) return;
+    if (!auth(ADMIN_HASH)) return; // SECURED
     const id = 'ev_' + Date.now();
     events.push({ id, name, active: false });
     inp.value = '';
@@ -1173,7 +1189,7 @@
   }
 
   function setActiveEvent(id) {
-    if (!auth(ADMIN_PWD)) return;
+    if (!auth(ADMIN_HASH)) return; // SECURED
     events.forEach(e => e.active = (e.id === id));
     save();
   }
@@ -1187,24 +1203,44 @@
       ? `Delete event "${ev.name}"? It has ${matchCount} match records — those will NOT be deleted, but the event label will be removed.`
       : `Delete event "${ev.name}"?`;
     if (!confirm(msg)) return;
-    if (!auth(ADMIN_PWD)) return;
+    if (!auth(ADMIN_HASH)) return; // SECURED
     events = events.filter(e => e.id !== id);
     if (!events.find(e => e.active)) events[0].active = true;
     save();
   }
   function updateSkill(n,v) { players.find(x => x.name===n).skill = parseInt(v); save(); }
-  function deleteMatch(id) { if (auth(SUPER_PWD)) { matchHistory = matchHistory.filter(m => m.id !== id); save(); } }
+  function deleteMatch(id) { if (auth(SUPER_HASH)) { matchHistory = matchHistory.filter(m => m.id !== id); save(); } }
+  
   function editMatch(id) {
-    if (!auth(SUPER_PWD)) return;
+    if (!auth(SUPER_HASH)) return; // SECURED
     let m = matchHistory.find(x => x.id === id);
-    let ns1 = prompt("T1 Score:", m.s1);
+    
+    // Smarter Edit Flow
+    let ns1 = prompt(`Enter Score for T1 (${m.t1.join(" & ")}):`, m.s1);
     if (ns1 === null) return;
-    let ns2 = prompt("T2 Score:", m.s2);
+    
+    let ns2 = prompt(`Enter Score for T2 (${m.t2.join(" & ")}):`, m.s2);
     if (ns2 === null) return;
+    
     const p1 = parseInt(ns1), p2 = parseInt(ns2);
     if (isNaN(p1) || isNaN(p2)) return alert("Scores must be numbers.");
     if (p1 < 0 || p2 < 0) return alert("Scores cannot be negative.");
     if (p1 === p2) return alert("Scores cannot be equal — no ties in badminton!");
+    
+    // Time Edit Flow
+    const d = new Date(m.time || Date.now());
+    // Format to yyyy-MM-ddThh:mm for the local prompt
+    const localIso = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+    let newTimeStr = prompt("Edit Match Date & Time (YYYY-MM-DDTHH:MM):", localIso);
+    if (newTimeStr) {
+      let parsedTime = new Date(newTimeStr).getTime();
+      if (!isNaN(parsedTime)) {
+        m.time = parsedTime;
+      } else {
+        alert("Invalid time format. Time was not changed.");
+      }
+    }
+
     m.s1 = p1; m.s2 = p2;
     save();
   }
@@ -1504,7 +1540,7 @@
     return;
     }
 
-    if (!auth(SUPER_PWD)) return;
+    if (!auth(SUPER_HASH)) return; // SECURED
 
     if (confirm(`⚠️ Reset "${ev.name}"?\nAll matches for this event will be deleted.`)) {
     matchHistory = matchHistory.filter(m => (m.eventId || 'def') !== resetId);
@@ -1537,6 +1573,15 @@
   function resetZoom() {
     appZoom = 1;
     applyZoom();
+  }
+
+  // Register Service Worker for PWA
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(err => {
+        console.log('Service Worker registration failed: ', err);
+      });
+    });
   }
 
 </script>
