@@ -220,7 +220,7 @@
         <div style="font-size:10px; color:#888; margin-top:4px;">The active event is used for all new match records. Switch events to run tournaments.</div>
       </div>
       
-      <div style="text-align: center; margin-top: 10px; margin-bottom: 20px; font-size: 11px; color: #999; font-weight: bold;">App Version: v1.0.0</div>
+      <div style="text-align: center; margin-top: 10px; margin-bottom: 20px; font-size: 11px; color: #999; font-weight: bold;">App Version: v1.0.1</div>
 
     </div>
   </div>
@@ -1010,7 +1010,7 @@
         const isDynamic = config.skillMode === 'dynamic' && eff !== p.skill;
         const skillLabel = isDynamic
           ? `<span title="Dynamic skill (${p.skill} manual → ${eff} dynamic)" style="color:var(--fb-blue)">⚡${eff}</span>`
-          : `<input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value)" style="width:40px;">`;
+		  : `<input type="number" value="${p.skill}" onchange="updateSkill('${p.name}', this.value, this)" style="width:40px;">`;
         return `<div class="single-row"><span><input type="checkbox" ${p.present?'checked':''} onchange="togglePresence('${p.name}')"> <b>${p.name}</b></span>
           <div style="display:flex;align-items:center;gap:4px;">${skillLabel}<button class="btn-outline" onclick="deletePlayer('${p.name}')">🗑️</button></div></div>`;
       }).join('');
@@ -1208,7 +1208,14 @@
     if (!events.find(e => e.active)) events[0].active = true;
     save();
   }
-  function updateSkill(n,v) { players.find(x => x.name===n).skill = parseInt(v); save(); }
+  function updateSkill(n, v, el) { 
+    if (!auth(ADMIN_HASH)) { 
+      if (el) el.value = players.find(x => x.name === n).skill; // Reverts the number visually if auth fails
+      return; 
+    }
+    players.find(x => x.name===n).skill = parseInt(v); 
+    save(); 
+  }
   function deleteMatch(id) { if (auth(SUPER_HASH)) { matchHistory = matchHistory.filter(m => m.id !== id); save(); } }
   
   function editMatch(id) {
