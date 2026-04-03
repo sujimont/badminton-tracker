@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitboys-cache-v2'; // Remember to bump this to v2, v3, etc. when you update!
+const CACHE_NAME = 'fitboys-cache-v3'; // Remember to bump this to v2, v3, etc. when you update!
 
 const urlsToCache = [
   './',
